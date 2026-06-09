@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><title>VulnBank - Dashboard</title></head>
+<body>
+  <h2>Welcome, {{ user[1] }}</h2>
+  <p>Balance: ${{ user[2] }}</p>
+  <h3>Transfer Funds</h3>
+  <form method="POST" action="/transfer">
+    <input name="to" placeholder="Recipient username"><br><br>
+    <input name="amount" placeholder="Amount"><br><br>
+    <button type="submit">Transfer</button>
+  </form>
+  <h3>Transactions</h3>
+  <ul>
+  {% for t in transactions %}
+    <li>${{ t[2] }} - {{ t[3] }}</li>
+  {% endfor %}
+  </ul>
+  <a href="/logout">Logout</a>
+</body>
+</html>
