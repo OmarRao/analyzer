@@ -17,7 +17,7 @@
 
 ## What Is VulnBank?
 
-VulnBank is a multi-module Python/Flask banking simulation containing **400+ deliberately introduced security findings** across **22 CWE categories** and **12 MITRE ATT&CK techniques**. Every vulnerability is annotated with CWE and ATT&CK identifiers in comments, making it ideal for:
+VulnBank is a multi-module Python/Flask banking simulation containing **500+ deliberately introduced security findings** across **28 CWE categories** and **14 MITRE ATT&CK techniques**. Every vulnerability is annotated with CWE and ATT&CK identifiers in comments, making it ideal for:
 
 - Validating static analysis tools (Semgrep, CodeQL, Bandit, Snyk)
 - Benchmarking AI security scanners like [SecureScope](https://github.com/OmarRao/secure-scope)
@@ -75,19 +75,21 @@ VulnBank/
 | CWE-89 | SQL Injection | T1190 | app.py, api/auth.py, api/accounts.py, api/admin.py, api/transactions.py, services/search.py |
 | CWE-78 | OS Command Injection | T1059 | app.py, api/accounts.py, api/admin.py, api/files.py, jobs/scheduled.py |
 | CWE-79 | Cross-Site Scripting (XSS) | T1059.007 | app.py, api/admin.py, api/files.py, utils/formatters.py |
-| CWE-94 | Code Injection | T1059 | app.py |
-| CWE-611 | XML External Entity (XXE) | T1190 | utils.py, api/auth.py, services/search.py |
+| CWE-94 | Code Injection / SSTI (Jinja2) | T1059 | app.py, utils/formatters.py |
+| CWE-611 | XML External Entity (XXE) | T1190 | app.py, utils.py, api/auth.py, services/search.py |
 | CWE-1236 | CSV / Formula Injection | T1059 | api/reports.py, utils/formatters.py |
+| CWE-113 | HTTP Response Splitting | T1566 | app.py, api/auth.py |
 
 ### Authentication & Access Control
 
 | CWE | Name | MITRE ATT&CK | Files |
 |-----|------|--------------|-------|
 | CWE-798 | Hardcoded Credentials / API Keys | T1552.001 | app.py, config.py, api/auth.py, api/accounts.py, api/admin.py, api/files.py |
-| CWE-285 | Improper Authorization (IDOR) | T1548 | api/accounts.py, api/admin.py, api/files.py, api/users.py |
-| CWE-347 | JWT Signature Not Verified | T1190 | middleware/auth.py |
+| CWE-285 | Improper Authorization / BOLA (IDOR) | T1548 | app.py, api/accounts.py, api/admin.py, api/files.py, api/users.py |
+| CWE-347 | JWT Algorithm Confusion / Signature Bypass | T1552 | app.py, middleware/auth.py |
 | CWE-284 | Missing Authentication on Admin | T1548 | api/admin.py |
 | CWE-208 | Timing Attack / Username Enumeration | T1590 | api/auth.py |
+| CWE-915 | Mass Assignment (Unrestricted Object Update) | T1548 | app.py, api/users.py |
 
 ### Cryptography
 
@@ -104,8 +106,9 @@ VulnBank/
 |-----|------|--------------|-------|
 | CWE-918 | Server-Side Request Forgery (SSRF) | T1090 | app.py, api/accounts.py, api/admin.py, api/auth.py, services/email.py |
 | CWE-22 | Path Traversal | T1083 | app.py, api/accounts.py, api/admin.py, api/files.py, jobs/scheduled.py |
-| CWE-601 | Open Redirect | T1566 | api/auth.py |
+| CWE-601 | Open Redirect | T1566 | app.py, api/auth.py |
 | CWE-434 | Unrestricted File Upload | T1190 | api/files.py |
+| CWE-942 | Permissive CORS (Wildcard + Credentials) | T1090 | app.py |
 
 ### Application Logic
 
@@ -114,7 +117,19 @@ VulnBank/
 | CWE-352 | Missing CSRF Protection | T1562 | app.py |
 | CWE-502 | Insecure Deserialization (Pickle RCE) | T1059 | app.py, api/admin.py |
 | CWE-532 | Sensitive Data in Logs | T1552 | services/logger.py |
-| CWE-209 | Verbose Error Messages | T1590 | Multiple |
+| CWE-209 | Verbose Error Messages / Prompt Leak | T1590 | app.py, multiple |
+| CWE-1321 | Prototype Pollution / Object Injection | T1059 | app.py |
+| CWE-1333 | ReDoS — Catastrophic Regex Backtracking | T1499 | app.py, utils/validators.py |
+
+### Emerging / 2025 Threat Classes
+
+| Category | Vulnerability | Standard | Files |
+|----------|--------------|----------|-------|
+| **LLM Security** | Prompt Injection — user input concatenated into LLM system prompt | OWASP LLM01:2025 | app.py |
+| **API Security** | BOLA / IDOR — no ownership check on transaction objects | OWASP API1:2023 | app.py |
+| **API Security** | Mass Assignment — unrestricted JSON field merge escalates role | OWASP API3:2023 | app.py |
+| **API Security** | JWT Algorithm Confusion — `"alg":"none"` accepted for token forgery | OWASP API2:2023 | app.py |
+| **DoS** | ReDoS — nested quantifier regex causes catastrophic backtracking | CWE-1333 | app.py |
 
 ---
 
@@ -134,6 +149,8 @@ VulnBank/
 | T1566 | Phishing (Redirect) | Open redirect in OAuth callback |
 | T1600 | Weaken Encryption | MD5 passwords, ECB cipher mode |
 | T1021.004 | Remote Services: SSH | CMDi via SSH in admin panel |
+| T1499 | Endpoint Denial of Service | ReDoS via catastrophic regex backtracking |
+| T1059.001 | Scripting (LLM Abuse) | Prompt injection in AI financial advice endpoint |
 
 ---
 
@@ -179,6 +196,7 @@ A pre-generated sample report is available at:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| [v3.0.0](https://github.com/OmarRao/analyzer/releases/tag/v3.0.0) | 2026-06-17 | 2025 threat classes — SSTI, Prompt Injection, Mass Assignment, JWT Algorithm Confusion, BOLA, ReDoS, XXE, CORS, HTTP Response Splitting, Prototype Pollution |
 | [v2.0.0](https://github.com/OmarRao/analyzer/releases/tag/v2.0.0) | 2026-06-15 | Multi-module expansion — 400+ findings, API layer, services, middleware, jobs |
 | [v1.0.0](https://github.com/OmarRao/analyzer/releases/tag/v1.0.0) | 2026-06-09 | Initial release — core Flask app, 12 CWE types |
 
