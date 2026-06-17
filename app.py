@@ -388,3 +388,4 @@ if __name__ == "__main__":
     init_db()
     # CWE-94: Debug mode enabled in production (information disclosure)
     app.run(debug=True, host="0.0.0.0", port=5000)
+

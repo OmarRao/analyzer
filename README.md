@@ -4,7 +4,7 @@
 
 ---
 
-## ⚠️ Security Warning
+## ⚠�? Security Warning
 
 **THIS APPLICATION CONTAINS INTENTIONAL SECURITY VULNERABILITIES.**
 
@@ -121,7 +121,7 @@ VulnBank/
 | CWE-1321 | Prototype Pollution / Object Injection | T1059 | app.py |
 | CWE-1333 | ReDoS — Catastrophic Regex Backtracking | T1499 | app.py, utils/validators.py |
 
-### Emerging / 2025 Threat Classes
+### Emerging / Latest Threat Classes
 
 | Category | Vulnerability | Standard | Files |
 |----------|--------------|----------|-------|
@@ -196,7 +196,7 @@ A pre-generated sample report is available at:
 
 | Version | Date | Notes |
 |---------|------|-------|
-| [v3.0.0](https://github.com/OmarRao/analyzer/releases/tag/v3.0.0) | 2026-06-17 | 2025 threat classes — SSTI, Prompt Injection, Mass Assignment, JWT Algorithm Confusion, BOLA, ReDoS, XXE, CORS, HTTP Response Splitting, Prototype Pollution |
+| [v3.0.0](https://github.com/OmarRao/analyzer/releases/tag/v3.0.0) | 2026-06-17 | Latest Threat Classes — SSTI, Prompt Injection, Mass Assignment, JWT Algorithm Confusion, BOLA, ReDoS, XXE, CORS, HTTP Response Splitting, Prototype Pollution |
 | [v2.0.0](https://github.com/OmarRao/analyzer/releases/tag/v2.0.0) | 2026-06-15 | Multi-module expansion — 400+ findings, API layer, services, middleware, jobs |
 | [v1.0.0](https://github.com/OmarRao/analyzer/releases/tag/v1.0.0) | 2026-06-09 | Initial release — core Flask app, 12 CWE types |
 
@@ -215,3 +215,4 @@ Found a vulnerability pattern that's missing? PRs welcome — every new vuln mus
 **Built by [Omar Rao](https://github.com/OmarRao)**  
 Engineer — Data Resilience, Cybersecurity and Privacy  
 [LinkedIn](https://www.linkedin.com/in/omarrao/) &nbsp;·&nbsp; [Substack](https://omarrao.substack.com/)
+
