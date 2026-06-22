@@ -17,7 +17,7 @@
 
 ## What Is VulnBank?
 
-VulnBank is a multi-module Python/Flask banking simulation containing **500+ deliberately introduced security findings** across **28 CWE categories** and **14 MITRE ATT&CK techniques**. Every vulnerability is annotated with CWE and ATT&CK identifiers in comments, making it ideal for:
+VulnBank is a multi-module Python/Flask banking simulation containing **500+ deliberately introduced security findings** across **28 CWE categories**, **14 MITRE ATT&CK techniques**, **PCI DSS v4.0 requirements**, **NIST SP 800-53 Rev 5 controls**, and **SANS/CWE Top 25 rankings**. Every vulnerability is annotated with all applicable framework identifiers in comments, making it ideal for:
 
 - Validating static analysis tools (Semgrep, CodeQL, Bandit, Snyk)
 - Benchmarking AI security scanners like [SecureScope](https://github.com/OmarRao/secure-scope)
@@ -196,17 +196,87 @@ A pre-generated sample report is available at:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| [v4.0.0](https://github.com/OmarRao/analyzer/releases/tag/v4.0.0) | 2026-06-22 | Multi-framework annotations — PCI DSS v4.0, NIST SP 800-53 Rev 5, SANS/CWE Top 25 added to all vulnerabilities; README framework mapping tables |
 | [v3.0.0](https://github.com/OmarRao/analyzer/releases/tag/v3.0.0) | 2026-06-17 | Latest Threat Classes — SSTI, Prompt Injection, Mass Assignment, JWT Algorithm Confusion, BOLA, ReDoS, XXE, CORS, HTTP Response Splitting, Prototype Pollution |
 | [v2.0.0](https://github.com/OmarRao/analyzer/releases/tag/v2.0.0) | 2026-06-15 | Multi-module expansion — 400+ findings, API layer, services, middleware, jobs |
 | [v1.0.0](https://github.com/OmarRao/analyzer/releases/tag/v1.0.0) | 2026-06-09 | Initial release — core Flask app, 12 CWE types |
 
 ---
 
+## PCI DSS v4.0 Coverage
+
+VulnBank maps 13+ vulnerabilities to PCI DSS v4.0 requirements — particularly relevant because it simulates a payment-processing banking application.
+
+| PCI DSS Requirement | Scope | Vulnerabilities Demonstrated |
+|---------------------|-------|------------------------------|
+| Req 2.2.1 — Secure default config | System hardening | Debug mode in production (CWE-94/209) |
+| Req 3.3.1 — Sensitive auth data not retained | Data storage | Plaintext password storage (CWE-916) |
+| Req 4.2.1 — Strong cryptography in transit | Cryptographic controls | Weak MD5 hashing (CWE-327), permissive CORS (CWE-942) |
+| Req 6.2.4 — Prevent common software attacks | Secure development | SQLi, XSS, CMDi, SSTI, XXE, SSRF, CSRF, Path Traversal, ReDoS, Open Redirect, Pickle RCE |
+| Req 6.3.2 — Software inventory integrity | Supply chain | Insecure deserialization (CWE-502), SSTI (CWE-94) |
+| Req 7.2 — Least privilege | Access control | BOLA/IDOR (CWE-285), Mass Assignment (CWE-915) |
+| Req 7.3 — Access control systems | Authorisation | Missing auth on admin (CWE-284), BOLA (CWE-285), Mass Assignment |
+| Req 8.3.6 — Strong passphrase requirements | Authentication | MD5 passwords (CWE-916), JWT algorithm confusion (CWE-347) |
+| Req 8.6.1 — System-account credentials managed | Credential hygiene | Hardcoded API keys & DB passwords (CWE-798) |
+| Req 8.6.3 — Credentials protected from misuse | Credential protection | JWT `alg:none` bypass (CWE-347) |
+| Req 1.3 / SC-7 — Network access controls | Network boundary | SSRF to internal services (CWE-918) |
+| Req 12.3.2 — Risk-based vulnerability management | Governance | ReDoS (CWE-1333), debug mode |
+| Req 12.6.1/2 — Security awareness | Training | Prompt injection (LLM01), phishing via open redirect |
+
+---
+
+## NIST SP 800-53 Rev 5 Coverage
+
+| Control Family | Control ID | Description | Vulnerabilities |
+|---------------|------------|-------------|-----------------|
+| Access Control | AC-3 | Access Enforcement | BOLA/IDOR (CWE-285), Mass Assignment (CWE-915) |
+| Access Control | AC-4 | Information Flow Enforcement | SSRF (CWE-918), Open Redirect (CWE-601) |
+| Access Control | AC-6 | Least Privilege | BOLA (CWE-285), Mass Assignment (CWE-915) |
+| Audit & Accountability | AU-3 | Content of Audit Records | Sensitive data in logs (CWE-532) |
+| Configuration Management | CM-6 | Configuration Settings | Debug mode enabled, hardcoded secrets |
+| Configuration Management | CM-7 | Least Functionality | Debug mode, unnecessary admin endpoints |
+| Identification & Authentication | IA-5 | Authenticator Management | Hardcoded credentials (CWE-798), weak hashing |
+| Identification & Authentication | IA-5(1) | Password-based Authentication | MD5 hashing (CWE-916) |
+| Identification & Authentication | IA-8 | Non-Org User Authentication | JWT confusion (CWE-347) |
+| System & Communications | SC-5 | DoS Protection | ReDoS (CWE-1333) |
+| System & Communications | SC-7 | Boundary Protection | SSRF (CWE-918), XXE (CWE-611) |
+| System & Communications | SC-8 | Transmission Confidentiality | Permissive CORS (CWE-942), CSRF (CWE-352) |
+| System & Communications | SC-13 | Cryptographic Protection | MD5 (CWE-327), JWT `alg:none` (CWE-347) |
+| System & Communications | CA-3 | Information Exchange | CORS misconfiguration (CWE-942) |
+| System & Info Integrity | SI-3 | Malicious Code Protection | Pickle RCE (CWE-502), SSTI (CWE-94) |
+| System & Info Integrity | SI-10 | Information Input Validation | SQLi, XSS, CMDi, XXE, Path Traversal, ReDoS, SSRF |
+| System & Acquisition | SA-15 | Development Process Standards | Hardcoded secrets (CWE-798) |
+
+---
+
+## SANS / CWE Top 25 (2023) Coverage
+
+VulnBank deliberately includes 10 of the SANS Top 25 most dangerous software weaknesses.
+
+| Rank | CWE | Name | Endpoint in VulnBank |
+|------|-----|------|----------------------|
+| #2 | CWE-79 | Cross-Site Scripting | `/search` (reflected XSS in results) |
+| #3 | CWE-89 | SQL Injection | `/login`, `/search`, `/profile/<u>`, `/transfer`, `/dashboard` |
+| #5 | CWE-78 | OS Command Injection | `/admin/ping`, `/admin/run` |
+| #8 | CWE-22 | Path Traversal | `/admin/logs` |
+| #9 | CWE-352 | CSRF | `/transfer` |
+| #18 | CWE-798 | Hardcoded Credentials | `app.py` module globals |
+| #19 | CWE-918 | SSRF | `/api/fetch` |
+| #23 | CWE-611 | XML External Entity | `/api/import/statement` |
+| — | CWE-502 | Insecure Deserialization | `/api/restore` (OWASP A08 critical) |
+| — | CWE-347 | Improper Crypto Signature Verification | `/api/token/verify` |
+| — | CWE-601 | Open Redirect | `/api/redirect` |
+| — | CWE-916 | Insufficient Password Hashing | `/reset-password` |
+| — | CWE-1333 | ReDoS | `/api/validate/email` |
+
+---
+
 ## Contributing
 
 Found a vulnerability pattern that's missing? PRs welcome — every new vuln must include:
-- CWE comment annotation: `# CWE-XXX: Description (ATT&CK: TXXXX)`
-- Entry in the README vulnerability table
+- CWE comment annotation with all applicable framework IDs:
+  `# CWE-XXX: Description (ATT&CK: TXXXX | OWASP AXX | PCI DSS Req X.X.X | NIST XX-X | TOP25 #N)`
+- Entry in the README vulnerability table and relevant framework tables
 
 ---
 
@@ -215,4 +285,4 @@ Found a vulnerability pattern that's missing? PRs welcome — every new vuln mus
 **Built by [Omar Rao](https://github.com/OmarRao)**  
 Engineer — Data Resilience, Cybersecurity and Privacy  
 [LinkedIn](https://www.linkedin.com/in/omarrao/) &nbsp;·&nbsp; [Substack](https://omarrao.substack.com/)
-
+
