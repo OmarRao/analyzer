@@ -17,7 +17,7 @@
 
 ## What Is VulnBank?
 
-VulnBank is a multi-module Python/Flask banking simulation containing **500+ deliberately introduced security findings** across **28 CWE categories**, **14 MITRE ATT&CK techniques**, **PCI DSS v4.0 requirements**, **NIST SP 800-53 Rev 5 controls**, and **SANS/CWE Top 25 rankings**. Every vulnerability is annotated with all applicable framework identifiers in comments, making it ideal for:
+VulnBank is a multi-module Python/Flask banking simulation containing **500+ deliberately introduced security findings** across **28 CWE categories**, **14 MITRE ATT&CK techniques**, **PCI DSS v4.0 requirements**, **NIST SP 800-53 Rev 5 controls**, **ISO 27001:2022 Annex A controls**, and **SANS/CWE Top 25 rankings**. Every vulnerability is annotated with all applicable framework identifiers in comments, making it ideal for:
 
 - Validating static analysis tools (Semgrep, CodeQL, Bandit, Snyk)
 - Benchmarking AI security scanners like [SecureScope](https://github.com/OmarRao/secure-scope)
@@ -196,6 +196,7 @@ A pre-generated sample report is available at:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| [v5.0.0](https://github.com/OmarRao/analyzer/releases/tag/v5.0.0) | 2026-06-23 | Complete 6-framework coverage — ISO 27001:2022 Annex A added to all 14 api/utils/jobs/config/models files; new CWE-362 race-condition endpoints and CWE-840 negative-transfer business logic flaw |
 | [v4.0.0](https://github.com/OmarRao/analyzer/releases/tag/v4.0.0) | 2026-06-22 | Multi-framework annotations — PCI DSS v4.0, NIST SP 800-53 Rev 5, SANS/CWE Top 25 added to all vulnerabilities; README framework mapping tables |
 | [v3.0.0](https://github.com/OmarRao/analyzer/releases/tag/v3.0.0) | 2026-06-17 | Latest Threat Classes — SSTI, Prompt Injection, Mass Assignment, JWT Algorithm Confusion, BOLA, ReDoS, XXE, CORS, HTTP Response Splitting, Prototype Pollution |
 | [v2.0.0](https://github.com/OmarRao/analyzer/releases/tag/v2.0.0) | 2026-06-15 | Multi-module expansion — 400+ findings, API layer, services, middleware, jobs |
@@ -268,6 +269,24 @@ VulnBank deliberately includes 10 of the SANS Top 25 most dangerous software wea
 | — | CWE-601 | Open Redirect | `/api/redirect` |
 | — | CWE-916 | Insufficient Password Hashing | `/reset-password` |
 | — | CWE-1333 | ReDoS | `/api/validate/email` |
+
+---
+
+## ISO 27001:2022 Coverage
+
+| Annex A Control | Control Name | Vulnerability Types Demonstrated |
+|----------------|--------------|----------------------------------|
+| A.5.15 | Access control | IDOR/BOLA (CWE-285), Mass Assignment (CWE-915), Missing authentication (CWE-284) |
+| A.5.17 | Authentication information | Hardcoded credentials and API keys (CWE-798), JWT weak secret |
+| A.5.34 | Privacy and protection of PII | Sensitive PII/PAN in audit logs (CWE-532), cleartext card storage (CWE-312) |
+| A.8.3 | Information access restriction | Path traversal (CWE-22), IDOR (CWE-285), unrestricted file download |
+| A.8.10 | Information deletion | Hardcoded credentials never rotated (CWE-798) |
+| A.8.12 | Data leakage prevention | Sensitive data in logs — passwords, tokens, card numbers (CWE-532) |
+| A.8.15 | Logging | Unrestricted file upload bypasses audit controls (CWE-434) |
+| A.8.20 | Networks security | SSRF to internal network services (CWE-918), XXE SSRF (CWE-611) |
+| A.8.23 | Web filtering | SSRF via OAuth callback, webhook, and payment-processor URLs (CWE-918) |
+| A.8.24 | Use of cryptography | MD5 password hashing (CWE-916/327), weak random tokens (CWE-330), ECB mode |
+| A.8.28 | Secure coding | SQLi (CWE-89), XSS (CWE-79), CMDi (CWE-78), SSTI (CWE-94), Pickle RCE (CWE-502), Race Condition (CWE-362), Business Logic (CWE-840) |
 
 ---
 

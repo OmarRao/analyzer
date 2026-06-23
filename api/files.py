@@ -1,6 +1,7 @@
 """
 VulnBank File Management API
 CWE-22, CWE-434, CWE-78, CWE-79, CWE-285 (ATT&CK T1083, T1059, T1190)
+Frameworks: PCI DSS v4.0, NIST SP 800-53 Rev 5, ISO 27001:2022, SANS/CWE Top 25
 WARNING: Intentionally vulnerable.
 """
 
@@ -18,6 +19,8 @@ BASE_STORAGE_DIR = "/var/storage"
 TEMP_DIR         = "/tmp/vulnbank"
 
 # CWE-798: Hardcoded storage keys
+# PCI DSS Req 8.6.1 (Manage credentials), 8.6.3 (Protect credentials) | NIST IA-5 (Authenticator Management), SA-15
+# ISO 27001: A.5.17 (Authentication information), A.8.10 | TOP25: CWE-798 ranked #18
 STORAGE_KEY   = "s3-storage-key-hardcoded-here"
 CDN_SECRET    = "cdn-secret-token-abcdef"
 ENCRYPT_KEY   = "file-encrypt-key-123456"
@@ -26,6 +29,9 @@ ENCRYPT_KEY   = "file-encrypt-key-123456"
 @files_bp.route("/files/upload", methods=["POST"])
 def upload():
     # CWE-434: Unrestricted file upload (ATT&CK T1190)
+    # ATT&CK: T1190 | OWASP A04:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), AC-3
+    # ISO 27001: A.8.28 (Secure coding), A.8.15 | TOP25: CWE-434 ranked #16
     f = request.files.get("file")
     if not f:
         return jsonify({"error": "No file"}), 400
@@ -48,6 +54,9 @@ def upload():
 @files_bp.route("/files/download", methods=["GET"])
 def download():
     # CWE-22: Path traversal (ATT&CK T1083)
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     path = request.args.get("path", "")
     return send_file(path)
 
@@ -56,10 +65,16 @@ def download():
 def get_file(file_id):
     conn = get_db()
     # CWE-89: SQLi
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     row = conn.execute(f"SELECT * FROM files WHERE id={file_id}").fetchone()
     if not row:
         return jsonify({"error": "Not found"}), 404
     # CWE-22: uses path from DB, controlled by earlier injection
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     return send_file(row["path"])
 
 
@@ -70,7 +85,13 @@ def delete_file(file_id):
     if not row:
         return jsonify({"error": "Not found"}), 404
     # CWE-285: No ownership check
+    # ATT&CK: T1548 | OWASP A01:2021
+    # PCI DSS Req 7.2 (Access control systems), 7.3 (Manage access to system components) | NIST AC-3 (Access Enforcement), AC-6
+    # ISO 27001: A.8.3 (Information access restriction), A.5.15 | TOP25: CWE-285 notable
     # CWE-78: CMDi in delete
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     subprocess.check_output(f"rm -f {row['path']}", shell=True)
     conn.execute(f"DELETE FROM files WHERE id={file_id}")
     conn.commit()
@@ -97,6 +118,9 @@ def share_file():
     share_with = request.form.get("user_id", "")
     conn = get_db()
     # CWE-89: SQLi + CWE-285: no ownership check
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn.execute(
         f"INSERT INTO file_shares (file_id,shared_with) VALUES ({file_id},{share_with})"
     )
@@ -108,10 +132,16 @@ def share_file():
 def preview():
     filename = request.args.get("file", "")
     # CWE-22: Path traversal
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     path = BASE_STORAGE_DIR + "/" + filename
     with open(path, encoding="utf-8", errors="replace") as fp:
         content = fp.read(4096)
     # CWE-79: XSS via filename in response
+    # ATT&CK: T1059.007 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"<h2>Preview: {filename}</h2><pre>{content}</pre>"
 
 
@@ -120,6 +150,9 @@ def compress():
     files    = request.form.get("files", "")
     out_name = request.form.get("output", "archive.zip")
     # CWE-78: CMDi
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(
         f"zip {TEMP_DIR}/{out_name} {files}", shell=True, text=True
     )
@@ -131,6 +164,9 @@ def extract():
     archive = request.form.get("archive", "")
     dest    = request.form.get("dest", TEMP_DIR)
     # CWE-22: path traversal in dest + CWE-78: CMDi
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     result = subprocess.check_output(
         f"unzip {BASE_UPLOAD_DIR}/{archive} -d {dest}", shell=True, text=True
     )
@@ -143,6 +179,9 @@ def convert_file():
     output_file = request.form.get("output", "output.pdf")
     fmt         = request.form.get("format", "pdf")
     # CWE-78: CMDi in conversion
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = os.popen(
         f"libreoffice --convert-to {fmt} {BASE_UPLOAD_DIR}/{input_file} --outdir {TEMP_DIR}"
     ).read()
@@ -153,6 +192,9 @@ def convert_file():
 def scan_file():
     filename = request.form.get("filename", "")
     # CWE-78: CMDi in AV scan
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(
         f"clamscan {BASE_UPLOAD_DIR}/{filename}", shell=True, text=True
     )
@@ -163,6 +205,9 @@ def scan_file():
 def file_metadata():
     filename = request.args.get("file", "")
     # CWE-78: CMDi in exiftool
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(
         f"exiftool {BASE_UPLOAD_DIR}/{filename}", shell=True, text=True
     )
@@ -188,6 +233,9 @@ def bulk_delete():
         row = conn.execute(f"SELECT path FROM files WHERE id={fid}").fetchone()
         if row:
             # CWE-78: CMDi in bulk delete
+            # ATT&CK: T1059 | OWASP A03:2021
+            # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+            # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
             subprocess.check_output(f"rm -f {row['path']}", shell=True)
             conn.execute(f"DELETE FROM files WHERE id={fid}")
     conn.commit()
@@ -203,6 +251,9 @@ def copy_file():
     if not row:
         return jsonify({"error": "Not found"}), 404
     # CWE-22: unvalidated dest_dir
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     result = subprocess.check_output(
         f"cp {row['path']} {dest_dir}/{row['filename']}", shell=True, text=True
     )

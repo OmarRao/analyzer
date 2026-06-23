@@ -9,6 +9,7 @@ Security Framework Annotations used throughout:
   OWASP      — OWASP Top 10 2021 / API Top 10 2023 / LLM Top 10 2025
   PCI DSS    — PCI DSS v4.0 Requirements
   NIST       — NIST SP 800-53 Rev 5 security controls
+  ISO 27001  — ISO 27001:2022 Annex A controls
   TOP25      — SANS/CWE Top 25 Most Dangerous Software Weaknesses (2023 ranking)
 """
 
@@ -460,11 +461,123 @@ def open_redirect():
     return resp
 
 
+# ── Race Condition / TOCTOU on /transfer ──────────────────────────────────────
+#
+# CWE-362: Race Condition (TOCTOU) on the /transfer endpoint above.
+# ATT&CK: T1499 - Endpoint Denial of Service / abuse | OWASP API4:2023 - Unrestricted Resource Consumption
+# PCI DSS Req 6.2.4 (prevent logic flaws exploitable via concurrent requests)
+# NIST SC-5 (Denial-of-Service Protection) | AC-3 (Access Enforcement)
+# ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-362 notable
+#
+# HOW THE DOUBLE-SPEND WORKS ON /transfer:
+#   1. Attacker opens two concurrent HTTP requests to POST /transfer with the same
+#      amount (e.g. $1000) and the same session cookie.
+#   2. Both requests pass the balance check (READ balance = $1000 — no lock).
+#   3. Both requests execute UPDATE balance - 1000 before either commits.
+#   4. Effective debit = $1000 instead of $2000 → attacker receives $2000 total
+#      while only $1000 is deducted. Classic check-then-act TOCTOU.
+#   Fix: use a database-level transaction with SELECT ... FOR UPDATE or an
+#        application-level mutex / atomic compare-and-subtract.
+
+
+@app.route("/api/transfer/bulk", methods=["POST"])
+def bulk_transfer():
+    # CWE-362: Race Condition / TOCTOU — loop processes transfers without any locking.
+    # ATT&CK: T1499 - Endpoint Denial of Service | OWASP API4:2023 - Unrestricted Resource Consumption
+    # PCI DSS Req 6.2.4 (prevent logic flaws) | Req 4.2.1 (integrity of financial transactions)
+    # NIST SC-5 (Denial-of-Service Protection) | AC-3 (Access Enforcement)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-362 notable
+    #
+    # Vulnerability: each iteration reads the sender balance, subtracts, and writes back
+    # without holding a lock. Concurrent requests to this endpoint can all read the same
+    # starting balance and each perform a full debit — enabling double-spend / balance theft.
+    if "user_id" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+
+    transfers = request.get_json(force=True) or []
+    conn = get_db()
+    results = []
+    for t in transfers:
+        to_user = t.get("to", "")
+        amount  = t.get("amount", 0)
+        # CWE-89: SQL injection inside the loop (to_user unparameterised)
+        # PCI DSS Req 6.2.4 | NIST SI-10 | ISO 27001: A.8.28 | TOP25: CWE-89 #3
+        recipient = conn.execute(
+            f"SELECT id FROM users WHERE username='{to_user}'"
+        ).fetchone()
+        if recipient:
+            # No atomic lock: READ then WRITE — concurrent requests can both read the same
+            # balance and both debit, transferring more than the available balance (CWE-362).
+            conn.execute(
+                f"UPDATE users SET balance = balance - {amount} WHERE id = {session['user_id']}"
+            )
+            conn.execute(
+                f"UPDATE users SET balance = balance + {amount} WHERE id = {recipient[0]}"
+            )
+            conn.execute(
+                f"INSERT INTO transactions VALUES "
+                f"(NULL, {session['user_id']}, {amount}, 'Bulk transfer to {to_user}')"
+            )
+            results.append({"to": to_user, "amount": amount, "status": "ok"})
+        else:
+            results.append({"to": to_user, "amount": amount, "status": "user not found"})
+    conn.commit()
+    conn.close()
+    return jsonify({"transfers": results})
+
+
+# ── Business Logic Flaw — Negative Amount Transfer ────────────────────────────
+
+@app.route("/api/transfer/negative", methods=["POST"])
+def negative_transfer():
+    # CWE-840: Business Logic Errors — negative amount bypasses balance check, steals funds.
+    # ATT&CK: T1548 - Abuse Elevation Control Mechanism | OWASP API3:2023 - Broken Object Property Level Authorization
+    # PCI DSS Req 6.2.4 (validate all input including numeric ranges) | Req 7.2 (least-privilege access)
+    # NIST SI-10 (Information Input Validation) | AC-3 (Access Enforcement)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-840 notable
+    #
+    # Vulnerability: no check that amount > 0.
+    # Attacker sends amount = -500 (negative). The UPDATE computes:
+    #   sender.balance   = sender.balance   - (-500) = sender.balance   + 500  (GAINS money)
+    #   recipient.balance = recipient.balance + (-500) = recipient.balance - 500  (LOSES money)
+    # Net effect: attacker steals $500 from the victim's account with zero collateral.
+    if "user_id" not in session:
+        return jsonify({"error": "unauthorized"}), 401
+
+    to_user = request.form.get("to", "")
+    amount  = request.form.get("amount", "0")   # No validation — negative values accepted
+
+    conn = get_db()
+    # CWE-89: SQL injection in recipient lookup (to_user unparameterised)
+    # PCI DSS Req 6.2.4 | NIST SI-10 | ISO 27001: A.8.28 | TOP25: CWE-89 #3
+    recipient = conn.execute(
+        f"SELECT id FROM users WHERE username='{to_user}'"
+    ).fetchone()
+    if recipient:
+        # CWE-840: No sign / range check on amount — negative amount reverses the transfer direction
+        conn.execute(
+            f"UPDATE users SET balance = balance - {amount} WHERE id = {session['user_id']}"
+        )
+        conn.execute(
+            f"UPDATE users SET balance = balance + {amount} WHERE id = {recipient[0]}"
+        )
+        conn.execute(
+            f"INSERT INTO transactions VALUES "
+            f"(NULL, {session['user_id']}, {amount}, 'Transfer to {to_user}')"
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "transfer complete", "amount": amount, "to": to_user})
+    conn.close()
+    return jsonify({"error": "recipient not found"}), 404
+
+
 if __name__ == "__main__":
     init_db()
     # CWE-94 / CWE-209: Debug mode enabled — exposes stack traces, interactive debugger, internal config
     # ATT&CK: T1590 - Gather Victim Identity Information | OWASP A05:2021 - Security Misconfiguration
     # PCI DSS Req 6.2.4 (secure default config) | Req 2.2.1 (system components configured securely)
     # NIST CM-6 (Configuration Settings) | CM-7 (Least Functionality)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-489 (active debug code) notable
     app.run(debug=True, host="0.0.0.0", port=5000)
 
