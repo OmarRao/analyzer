@@ -1,6 +1,7 @@
 """
 VulnBank Loans API
 CWE-89, CWE-78, CWE-918, CWE-285, CWE-330 (ATT&CK T1190, T1059, T1548)
+PCI DSS v4.0, NIST SP 800-53 Rev 5, ISO 27001:2022, SANS/CWE Top 25
 WARNING: Intentionally vulnerable.
 """
 
@@ -49,6 +50,9 @@ def apply():
     income   = request.form.get("annual_income", "0")
     conn = get_db()
     # CWE-89: SQLi in application insert
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn.execute(
         f"INSERT INTO loans (user_id,amount,term_months,purpose,employer,income,status) "
         f"VALUES ({user_id},{amount},{term},'{purpose}','{employer}',{income},'pending')"
@@ -60,6 +64,9 @@ def apply():
 @loans_bp.route("/loans/<loan_id>/approve", methods=["POST"])
 def approve(loan_id):
     # CWE-285: No admin check
+    # ATT&CK: T1548 | OWASP A01:2021
+    # PCI DSS Req 7.2 (Access control systems) | NIST AC-3 (Access Enforcement), AC-6 (Least Privilege)
+    # ISO 27001: A.8.3 (Information access restriction), A.5.15 | TOP25: CWE-285 notable
     notes      = request.form.get("notes", "")
     rate       = request.form.get("interest_rate", "5.0")
     approver   = request.form.get("approver_id", "")
@@ -87,6 +94,9 @@ def make_payment(loan_id):
     from_acct = request.form.get("from_account", "")
     conn = get_db()
     # CWE-89: SQLi in payment
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn.execute(f"UPDATE accounts SET balance=balance-{amount} WHERE account_number='{from_acct}'")
     conn.execute(
         f"INSERT INTO loan_payments (loan_id,amount) VALUES ({loan_id},{amount})"
@@ -100,11 +110,17 @@ def credit_check():
     user_id = request.form.get("user_id", "")
     ssn     = request.form.get("ssn", "")
     # CWE-918: SSRF to credit bureau
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent SSRF) | NIST AC-4 (Information Flow Enforcement), SC-7 (Boundary Protection)
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     url = f"https://credit-bureau.internal/check?ssn={ssn}&user={user_id}&key={CREDIT_API_TOKEN}"
     resp = urllib.request.urlopen(url)
     score = resp.read().decode()
     conn = get_db()
     # CWE-89: SQLi
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn.execute(f"UPDATE users SET credit_score={score} WHERE id={user_id}")
     conn.commit()
     return jsonify({"credit_score": score})
@@ -127,6 +143,9 @@ def search():
 def loan_statement(loan_id):
     fmt = request.args.get("format", "pdf")
     # CWE-78: CMDi in statement generation
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-3 (Malicious Code Protection), SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(
         f"python gen_loan_statement.py --loan {loan_id} --format {fmt}",
         shell=True, text=True

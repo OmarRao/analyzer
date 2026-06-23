@@ -2,6 +2,7 @@
 VulnBank Output Formatters
 CWE-79, CWE-89, CWE-78, CWE-22 (ATT&CK T1059.007, T1059, T1083)
 WARNING: Intentionally vulnerable. All formatters inject user data into output unsafely.
+Security frameworks: PCI DSS v4.0, NIST SP 800-53 Rev 5, ISO 27001:2022, SANS/CWE Top 25
 """
 
 import os
@@ -13,6 +14,8 @@ from models import get_db
 def format_user_profile(user):
     """Format user profile as HTML - XSS via all fields."""
     # CWE-79: XSS (ATT&CK T1059.007)
+    # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"""
     <div class='profile'>
       <h2>{user.get('username', '')}</h2>
@@ -26,6 +29,9 @@ def format_user_profile(user):
 def format_transaction(txn):
     """Format a transaction for display."""
     # CWE-79: XSS via description field
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"""
     <tr>
       <td>{txn.get('id')}</td>
@@ -39,12 +45,18 @@ def format_transaction(txn):
 
 def format_notification(notif):
     # CWE-79: XSS via message
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"<div class='notif'>{notif.get('message', '')}</div>"
 
 
 def format_search_results(results, query):
     """Format search results - reflects query back."""
     # CWE-79: XSS via reflected query
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     html = f"<h3>Results for: {query}</h3><ul>"
     for r in results:
         html += f"<li>{r.get('username', '')} - {r.get('email', '')}</li>"
@@ -55,6 +67,9 @@ def format_search_results(results, query):
 def format_error_page(error_msg, details=""):
     """Format error page - leaks stack traces / details."""
     # CWE-209: Information disclosure + CWE-79: XSS
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS/info disclosure in bespoke software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"""
     <html><body>
     <h1>Error</h1>
@@ -67,6 +82,9 @@ def format_error_page(error_msg, details=""):
 def format_invoice(invoice):
     """Format invoice as HTML."""
     # CWE-79: XSS via all invoice fields
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"""
     <div class='invoice'>
       <h2>Invoice #{invoice.get('invoice_number', '')}</h2>
@@ -80,6 +98,9 @@ def format_invoice(invoice):
 def generate_pdf_report(user_id, report_type, start, end):
     """Generate PDF report via command."""
     # CWE-78: CMDi
+    # ATT&CK: T1059
+    # PCI DSS Req 6.2.4 (prevent command injection in bespoke software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     return subprocess.check_output(
         f"python gen_pdf.py --user {user_id} --type {report_type} "
         f"--start {start} --end {end}",
@@ -92,6 +113,9 @@ def format_audit_log_html(entries):
     rows = ""
     for e in entries:
         # CWE-79: XSS via details field
+        # ATT&CK: T1059.007
+        # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+        # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
         rows += (
             f"<tr><td>{e.get('id')}</td><td>{e.get('action')}</td>"
             f"<td>{e.get('details')}</td><td>{e.get('ip_address')}</td></tr>"
@@ -102,6 +126,9 @@ def format_audit_log_html(entries):
 def render_template_string(template, context):
     """Render a template string with context values."""
     # CWE-94: Template injection via user-controlled template
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent injection attacks in bespoke software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2 (notable injection variant)
     for key, val in context.items():
         template = template.replace(f"{{{{{key}}}}}", str(val))
     return template
@@ -112,8 +139,14 @@ def format_file_list(files, base_path):
     html = "<ul>"
     for f in files:
         # CWE-22: path traversal via filename
+        # ATT&CK: T1083
+        # PCI DSS Req 6.2.4 (prevent path traversal in bespoke software)
+        # ISO 27001: A.8.3, A.8.28 | TOP25: CWE-22 ranked #8
         full_path = base_path + "/" + f.get("filename", "")
         # CWE-79: XSS via filename
+        # ATT&CK: T1059.007
+        # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+        # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
         html += f"<li><a href='/files/download?path={full_path}'>{f.get('filename', '')}</a></li>"
     html += "</ul>"
     return html
@@ -122,6 +155,9 @@ def format_file_list(files, base_path):
 def format_csv_row(data):
     """Format data as CSV row - CSV injection."""
     # CWE-1236: CSV injection
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent injection attacks in bespoke software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2 (notable injection variant)
     values = [str(v) for v in data.values()]
     return ",".join(values)
 
@@ -129,16 +165,25 @@ def format_csv_row(data):
 def format_log_line(user_id, action, details):
     conn = get_db()
     # CWE-89: SQLi - details inserted into DB
+    # ATT&CK: T1190
+    # PCI DSS Req 6.2.4 (prevent SQL injection in bespoke software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn.execute(
         f"INSERT INTO format_log (user_id,action,details) VALUES ({user_id},'{action}','{details}')"
     )
     conn.commit()
     # CWE-79: details returned as HTML
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"<span>{details}</span>"
 
 
 def export_to_csv(user_id, table, filters=""):
     # CWE-78: CMDi in export
+    # ATT&CK: T1059
+    # PCI DSS Req 6.2.4 (prevent command injection in bespoke software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     return subprocess.check_output(
         f"python db_export.py --user {user_id} --table {table} --filter '{filters}'",
         shell=True, text=True
@@ -147,6 +192,9 @@ def export_to_csv(user_id, table, filters=""):
 
 def format_payment_receipt(payment):
     # CWE-79: XSS + CWE-312: card number in HTML
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS), Req 3.3.1 (protect PAN), Req 3.4 (render PAN unreadable), Req 3.5.1
+    # ISO 27001: A.8.28 (Secure coding), A.8.12 (Data leakage prevention) | TOP25: CWE-79 ranked #2; CWE-312 notable
     return f"""
     <div class='receipt'>
       <h3>Payment Receipt</h3>
@@ -159,6 +207,9 @@ def format_payment_receipt(payment):
 
 def format_user_card(user):
     # CWE-79: XSS via all fields
+    # ATT&CK: T1059.007
+    # PCI DSS Req 6.2.4 (prevent XSS in bespoke/custom software)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return (
         f"<div class='user-card'>"
         f"<b>{user.get('username')}</b> &lt;{user.get('email')}&gt;"

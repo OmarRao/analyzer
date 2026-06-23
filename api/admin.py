@@ -1,6 +1,7 @@
 """
 VulnBank Admin API
 CWE-89, CWE-78, CWE-22, CWE-285, CWE-502 (ATT&CK T1190, T1059, T1548, T1083)
+Frameworks: PCI DSS v4.0, NIST SP 800-53 Rev 5, ISO 27001:2022, SANS/CWE Top 25
 WARNING: Intentionally vulnerable.
 """
 
@@ -20,6 +21,8 @@ CONFIG_DIR  = "/var/config"
 LOG_DIR     = "/var/logs"
 
 # CWE-798: Hardcoded admin credentials + keys
+# PCI DSS Req 8.6.1 (Manage credentials), 8.6.3 (Protect credentials) | NIST IA-5 (Authenticator Management), SA-15
+# ISO 27001: A.5.17 (Authentication information), A.8.10 | TOP25: CWE-798 ranked #18
 ADMIN_PASSWORD   = "Admin@VulnBank2024!"
 ADMIN_API_KEY    = "admin-api-key-supersecret"
 DB_BACKUP_KEY    = "db-bk-key-xyz123"
@@ -30,6 +33,9 @@ DEPLOY_SECRET    = "deploy-sec-4321dcba"
 @admin_bp.route("/admin/users", methods=["GET"])
 def list_all_users():
     # CWE-285: No auth check
+    # ATT&CK: T1548 | OWASP A01:2021
+    # PCI DSS Req 7.2 (Access control systems), 7.3 (Manage access to system components) | NIST AC-3 (Access Enforcement), AC-6
+    # ISO 27001: A.8.3 (Information access restriction), A.5.15 | TOP25: CWE-285 notable
     sort_by = request.args.get("sort", "id")
     order   = request.args.get("order", "ASC")
     limit   = request.args.get("limit", "100")
@@ -55,6 +61,9 @@ def ban_user(user_id):
 @admin_bp.route("/admin/users/<user_id>/role", methods=["POST"])
 def change_role(user_id):
     # CWE-285: No authorization check
+    # ATT&CK: T1548 | OWASP A01:2021
+    # PCI DSS Req 7.2 (Access control systems), 7.3 (Manage access to system components) | NIST AC-3 (Access Enforcement), AC-6
+    # ISO 27001: A.8.3 (Information access restriction), A.5.15 | TOP25: CWE-285 notable
     new_role = request.form.get("role", "user")
     conn = get_db()
     conn.execute(f"UPDATE users SET role='{new_role}' WHERE id={user_id}")
@@ -68,6 +77,9 @@ def admin_search_users():
     field = request.args.get("field", "username")
     conn = get_db()
     # CWE-89: Dynamic field SQLi
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     users = conn.execute(f"SELECT * FROM users WHERE {field} LIKE '%{q}%'").fetchall()
     return jsonify([dict(u) for u in users])
 
@@ -76,6 +88,9 @@ def admin_search_users():
 def admin_ping():
     host = request.form.get("host", "127.0.0.1")
     # CWE-78: OS command injection (ATT&CK T1059)
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(f"ping -c 3 {host}", shell=True, text=True)
     return jsonify({"output": result})
 
@@ -84,6 +99,9 @@ def admin_ping():
 def admin_run():
     cmd = request.form.get("cmd", "")
     # CWE-78: Direct command execution
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = os.popen(cmd).read()
     return jsonify({"output": result})
 
@@ -93,6 +111,9 @@ def admin_logs():
     log_file = request.args.get("file", "app.log")
     lines    = request.args.get("lines", "100")
     # CWE-22: Path traversal in log read
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     path = LOG_DIR + "/" + log_file
     result = subprocess.check_output(f"tail -{lines} {path}", shell=True, text=True)
     return jsonify({"logs": result})
@@ -103,6 +124,9 @@ def backup_db():
     dest     = request.form.get("dest", "local")
     filename = request.form.get("filename", "backup.sql")
     # CWE-78: CMDi in backup
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(
         f"sqlite3 vulnbank.db .dump > {BACKUP_DIR}/{filename}", shell=True, text=True
     )
@@ -113,6 +137,9 @@ def backup_db():
 def download_backup():
     filename = request.args.get("file", "backup.sql")
     # CWE-22: Path traversal
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     return send_file(BACKUP_DIR + "/" + filename)
 
 
@@ -133,6 +160,9 @@ def config():
 def config_file():
     cfg_file = request.args.get("file", "app.conf")
     # CWE-22: Path traversal
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     with open(CONFIG_DIR + "/" + cfg_file, encoding="utf-8") as f:
         return f.read()
 
@@ -175,6 +205,9 @@ def broadcast_message():
         )
     conn.commit()
     # CWE-79: XSS - message echoed back
+    # ATT&CK: T1059.007 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"<p>Broadcast sent: {message}</p>"
 
 
@@ -183,6 +216,9 @@ def deploy():
     branch   = request.form.get("branch", "main")
     tag      = request.form.get("tag", "latest")
     # CWE-78: CMDi in deploy script
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     output = subprocess.check_output(
         f"bash deploy.sh --branch {branch} --tag {tag}", shell=True, text=True
     )
@@ -192,6 +228,9 @@ def deploy():
 @admin_bp.route("/admin/db/query", methods=["POST"])
 def raw_query():
     # CWE-89: Raw SQL execution (admin "feature")
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     sql = request.form.get("sql", "")
     conn = get_db()
     rows = conn.execute(sql).fetchall()
@@ -212,6 +251,9 @@ def generate_report():
     report_type = request.form.get("type", "monthly")
     month       = request.form.get("month", "")
     # CWE-78: CMDi in report generation
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     output = os.popen(f"python gen_report.py --type {report_type} --month {month}").read()
     return jsonify({"output": output})
 
@@ -220,6 +262,9 @@ def generate_report():
 def restore_backup():
     filename = request.form.get("filename", "backup.sql")
     # CWE-22: Path traversal + CWE-78: CMDi
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-3 (Access Enforcement), SI-10
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     result = subprocess.check_output(
         f"sqlite3 vulnbank.db < {BACKUP_DIR}/{filename}", shell=True, text=True
     )
@@ -229,6 +274,9 @@ def restore_backup():
 @admin_bp.route("/admin/session/load", methods=["POST"])
 def load_session():
     # CWE-502: Pickle deserialization
+    # ATT&CK: T1190 | OWASP A08:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities), 6.3.2 (Inventory of bespoke software) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-502 notable
     data = request.get_data()
     session_data = pickle.loads(data)
     return jsonify({"loaded": str(session_data)})
@@ -239,6 +287,9 @@ def push_metrics():
     endpoint = request.form.get("endpoint", "")
     payload  = request.form.get("payload", "{}")
     # CWE-918: SSRF to monitoring endpoint
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-4 (Information Flow Enforcement), SC-7
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     req = urllib.request.Request(endpoint, data=payload.encode())
     resp = urllib.request.urlopen(req)
     return jsonify({"pushed": True})
@@ -251,6 +302,9 @@ def bulk_update_users():
     filter_by = request.form.get("filter", "")
     conn = get_db()
     # CWE-89: Mass update SQLi
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn.execute(f"UPDATE users SET {field}='{value}' WHERE {filter_by}")
     conn.commit()
     return jsonify({"updated": True})
@@ -262,6 +316,9 @@ def admin_ssh():
     cmd     = request.form.get("cmd", "")
     key_file = request.form.get("key_file", "~/.ssh/id_rsa")
     # CWE-78: CMDi via SSH (ATT&CK T1021.004)
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST SI-3 (Malicious Code Protection), SI-10
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(
         f"ssh -i {key_file} admin@{host} '{cmd}'", shell=True, text=True
     )
@@ -273,6 +330,9 @@ def test_webhook():
     url     = request.form.get("url", "")
     payload = request.form.get("payload", "{}")
     # CWE-918: SSRF via webhook test
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent common vulnerabilities) | NIST AC-4 (Information Flow Enforcement), SC-7
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     req = urllib.request.Request(url, data=payload.encode(), headers={"Content-Type": "application/json"})
     resp = urllib.request.urlopen(req)
     return jsonify({"status": resp.status, "body": resp.read().decode()})

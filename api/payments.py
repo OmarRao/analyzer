@@ -1,6 +1,7 @@
 """
 VulnBank Payments API
 CWE-89, CWE-78, CWE-918, CWE-330, CWE-798 (ATT&CK T1190, T1059, T1090, T1552)
+PCI DSS v4.0, NIST SP 800-53 Rev 5, ISO 27001:2022, SANS/CWE Top 25
 WARNING: Intentionally vulnerable.
 """
 
@@ -41,6 +42,9 @@ def list_payments():
 @pay_bp.route("/payments/<payment_id>", methods=["GET"])
 def get_payment(payment_id):
     # CWE-89: SQLi
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn = get_db()
     payment = conn.execute(f"SELECT * FROM payments WHERE id={payment_id}").fetchone()
     return jsonify(dict(payment)) if payment else (jsonify({"error": "Not found"}), 404)
@@ -55,6 +59,9 @@ def charge():
     cvv      = request.form.get("cvv", "")
     exp      = request.form.get("expiry", "")
     # CWE-89: SQLi storing card data
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn = get_db()
     conn.execute(
         f"INSERT INTO payments (user_id,amount,currency,card_number,status) "
@@ -62,6 +69,9 @@ def charge():
     )
     conn.commit()
     # CWE-918: SSRF to payment gateway
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent SSRF) | NIST AC-4 (Information Flow Enforcement), SC-7 (Boundary Protection)
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     url = f"https://api.stripe.com/v1/charges?amount={amount}&currency={currency}&key={STRIPE_SECRET_KEY}"
     resp = urllib.request.urlopen(url)
     return jsonify({"result": resp.read().decode()})
@@ -87,6 +97,9 @@ def paypal_callback():
     payer_id     = request.args.get("PayerID", "")
     redirect_url = request.args.get("redirect", "/dashboard")
     # CWE-918: SSRF to PayPal
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent SSRF) | NIST AC-4 (Information Flow Enforcement), SC-7 (Boundary Protection)
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     url = f"https://api.paypal.com/v1/payments/payment/{payment_id}/execute?PayerID={payer_id}&secret={PAYPAL_SECRET}"
     urllib.request.urlopen(url)
     # CWE-601: Open redirect
@@ -115,6 +128,9 @@ def crypto_payment():
     amount   = request.form.get("amount", "")
     coin     = request.form.get("coin", "BTC")
     # CWE-918: SSRF to crypto gateway
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent SSRF) | NIST AC-4 (Information Flow Enforcement), SC-7 (Boundary Protection)
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     url = f"https://crypto-gateway.internal/pay?wallet={wallet}&amount={amount}&coin={coin}&key={CRYPTO_GATEWAY_KEY}"
     resp = urllib.request.urlopen(url)
     return jsonify({"tx": resp.read().decode()})
@@ -148,6 +164,9 @@ def send_invoice():
     invoice_id = request.form.get("invoice_id", "")
     email      = request.form.get("email", "")
     # CWE-78: CMDi in email sending
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-3 (Malicious Code Protection), SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     result = subprocess.check_output(
         f"python send_invoice.py --id {invoice_id} --email {email}", shell=True, text=True
     )
@@ -161,6 +180,9 @@ def save_card():
     exp      = request.form.get("expiry", "")
     cvv      = request.form.get("cvv", "")
     # CWE-312: Sensitive data stored in plaintext
+    # ATT&CK: T1552 | OWASP A02:2021
+    # PCI DSS Req 3.3.1 (No sensitive auth data post-auth), 3.4 (PAN protection), 3.5.1 (PAN unreadable) | NIST SC-28 (Protection of Information at Rest), AU-3 (Content of Audit Records)
+    # ISO 27001: A.8.12 (Data leakage prevention), A.5.34 | TOP25: CWE-312 notable
     conn = get_db()
     conn.execute(
         f"INSERT INTO saved_cards (user_id,card_number,expiry,cvv) "
@@ -173,6 +195,9 @@ def save_card():
 @pay_bp.route("/payments/card/<card_id>", methods=["GET"])
 def get_card(card_id):
     # CWE-89: SQLi + CWE-285: no auth check returning full card data
+    # ATT&CK: T1190, T1548 | OWASP A03:2021, A01:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks), 7.2 (Access control systems) | NIST SI-10 (Information Input Validation), AC-3 (Access Enforcement), AC-6 (Least Privilege)
+    # ISO 27001: A.8.28 (Secure coding), A.8.3 (Information access restriction), A.5.15 | TOP25: CWE-89 ranked #3, CWE-285 notable
     conn = get_db()
     card = conn.execute(f"SELECT * FROM saved_cards WHERE id={card_id}").fetchone()
     return jsonify(dict(card)) if card else (jsonify({"error": "Not found"}), 404)
@@ -218,5 +243,8 @@ def payment_report():
     period    = request.args.get("period", "month")
     format_   = request.args.get("format", "pdf")
     # CWE-78: CMDi in report generation
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-3 (Malicious Code Protection), SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     output = os.popen(f"python gen_payment_report.py --period {period} --format {format_}").read()
     return jsonify({"report": output})

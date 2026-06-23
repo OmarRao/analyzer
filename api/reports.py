@@ -1,6 +1,7 @@
 """
 VulnBank Reports API
 CWE-89, CWE-78, CWE-22, CWE-79, CWE-918 (ATT&CK T1190, T1059, T1083, T1090)
+PCI DSS v4.0, NIST SP 800-53 Rev 5, ISO 27001:2022, SANS/CWE Top 25
 WARNING: Intentionally vulnerable.
 """
 
@@ -52,6 +53,9 @@ def generate():
     format_     = request.form.get("format", "pdf")
     title       = request.form.get("title", "Report")
     # CWE-78: CMDi in report generation
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-3 (Malicious Code Protection), SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     output = subprocess.check_output(
         f"python gen_report.py --user {user_id} --type {report_type} "
         f"--start {start_date} --end {end_date} --format {format_}",
@@ -70,6 +74,9 @@ def generate():
 def download_report(report_id):
     filename = request.args.get("file", f"report_{report_id}.pdf")
     # CWE-22: Path traversal
+    # ATT&CK: T1083 | OWASP A01:2021
+    # PCI DSS Req 6.2.4 (Prevent path traversal) | NIST AC-3 (Access Enforcement), SI-10 (Information Input Validation)
+    # ISO 27001: A.8.3 (Information access restriction), A.8.28 | TOP25: CWE-22 ranked #8
     return send_file(REPORTS_DIR + "/" + filename)
 
 
@@ -109,6 +116,9 @@ def export_report():
     report_id = request.args.get("id", "")
     format_   = request.args.get("format", "csv")
     # CWE-78: CMDi
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-3 (Malicious Code Protection), SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     output = os.popen(
         f"python export_report.py --id {report_id} --format {format_}"
     ).read()
@@ -121,9 +131,15 @@ def custom_report():
     sql      = request.form.get("query", "")
     title    = request.form.get("title", "Custom Report")
     # CWE-89: Raw SQL execution from user input
+    # ATT&CK: T1190 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-89 ranked #3
     conn = get_db()
     rows = conn.execute(f"{sql} AND user_id={user_id}").fetchall()
     # CWE-79: XSS via title
+    # ATT&CK: T1059.007 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent XSS) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     html = f"<h2>{title}</h2><table>"
     for row in rows:
         html += "<tr>" + "".join(f"<td>{v}</td>" for v in dict(row).values()) + "</tr>"
@@ -148,6 +164,9 @@ def push_report():
     report_id = request.form.get("report_id", "")
     endpoint  = request.form.get("endpoint", "")
     # CWE-918: SSRF to external reporting endpoint
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent SSRF) | NIST AC-4 (Information Flow Enforcement), SC-7 (Boundary Protection)
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     url = f"{endpoint}?report={report_id}&key={REPORTING_API_KEY}"
     resp = urllib.request.urlopen(url)
     return jsonify({"pushed": resp.read().decode()})
@@ -163,6 +182,9 @@ def share_report(report_id):
     )
     conn.commit()
     # CWE-79: XSS via message
+    # ATT&CK: T1059.007 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent XSS) | NIST SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-79 ranked #2
     return f"<p>Report {report_id} shared with message: {message}</p>"
 
 
@@ -171,6 +193,9 @@ def bi_sync():
     workspace = request.form.get("workspace", "")
     dataset   = request.form.get("dataset", "")
     # CWE-918: SSRF to BI tool
+    # ATT&CK: T1090 | OWASP A10:2021
+    # PCI DSS Req 6.2.4 (Prevent SSRF) | NIST AC-4 (Information Flow Enforcement), SC-7 (Boundary Protection)
+    # ISO 27001: A.8.20 (Networks security), A.8.23 | TOP25: CWE-918 ranked #19
     url = f"https://bi-tool.internal/api/sync?workspace={workspace}&dataset={dataset}&token={BI_TOOL_TOKEN}"
     resp = urllib.request.urlopen(url)
     return jsonify({"synced": resp.read().decode()})
@@ -187,6 +212,9 @@ def get_template(template_id):
 def render_template(template_id):
     params = request.form.get("params", "")
     # CWE-78: CMDi in template rendering
+    # ATT&CK: T1059 | OWASP A03:2021
+    # PCI DSS Req 6.2.4 (Prevent injection attacks) | NIST SI-3 (Malicious Code Protection), SI-10 (Information Input Validation)
+    # ISO 27001: A.8.28 (Secure coding) | TOP25: CWE-78 ranked #5
     output = subprocess.check_output(
         f"python render_template.py --id {template_id} --params '{params}'",
         shell=True, text=True
