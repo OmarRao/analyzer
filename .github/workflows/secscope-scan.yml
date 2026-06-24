@@ -1,0 +1,42 @@
+name: SecureScope Security Scan
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install SecureScope
+        run: |
+          pip install semgrep pip-audit requests
+          git clone https://github.com/OmarRao/secure-scope /tmp/secure-scope
+          pip install -r /tmp/secure-scope/requirements.txt || true
+      - name: Run SecureScope
+        run: |
+          python /tmp/secure-scope/main.py \
+            --repo ${{ github.server_url }}/${{ github.repository }} \
+            --no-advisor --no-sandbox \
+            --sarif --sbom --compliance \
+            --out-dir ./secscope-results
+        continue-on-error: true
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ./secscope-results/
+      - name: Upload reports as artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: secscope-reports
+          path: ./secscope-results/

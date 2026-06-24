@@ -1,4 +1,4 @@
-# VulnBank — Deliberately Vulnerable Banking Application
+# VulnBank v6.0.0 — Deliberately Vulnerable Banking Application
 
 > **Purpose:** A purpose-built, intentionally insecure banking application used as the primary test target for [SecureScope](https://github.com/OmarRao/secure-scope) — an AI-powered GitHub security scanner with MITRE ATT&CK mapping, ransomware detection, and multi-LLM fix advisory.
 
@@ -44,7 +44,13 @@ VulnBank/
 │   ├── payments.py           # Payment processing — CSRF, race conditions
 │   ├── reports.py            # Reporting — CSV injection, XSS, path traversal
 │   ├── transactions.py       # Transaction history — IDOR, injection
-│   └── users.py              # User management — mass assignment, enumeration
+│   ├── users.py              # User management — mass assignment, enumeration
+│   ├── oauth.py              # OAuth misconfig — open redirect, SSRF, hardcoded secret
+│   ├── mfa.py                # 2FA bypass — master code, no lockout, weak entropy
+│   ├── passwordreset.py      # Reset poisoning — Host header injection, token replay
+│   ├── graphql_api.py        # GraphQL — SQLi resolvers, introspection, DoS, IDOR
+│   ├── jwt_auth.py           # JWT confusion — alg:none, HS256/RS256 swap, kid SQLi
+│   └── ldap.py               # LDAP injection — filter bypass, anonymous search
 │
 ├── services/
 │   ├── crypto_service.py     # Encryption — MD5, weak keys, ECB mode, hardcoded IV
@@ -131,6 +137,31 @@ VulnBank/
 | **API Security** | JWT Algorithm Confusion — `"alg":"none"` accepted for token forgery | OWASP API2:2023 | app.py |
 | **DoS** | ReDoS — nested quantifier regex causes catastrophic backtracking | CWE-1333 | app.py |
 
+### v6.0.0 New Vulnerability Classes
+
+| Category | CWE | Vulnerability | File |
+|----------|-----|--------------|------|
+| LDAP Injection | CWE-90 | Filter string injection — `uid={username}` bypass with `*)(&` | api/ldap.py |
+| LDAP Injection | CWE-200 | Anonymous search returns passwordHash attribute | api/ldap.py |
+| OAuth Misconfiguration | CWE-601 | `redirect_uri` not validated — auth code sent to attacker domain | api/oauth.py |
+| OAuth Misconfiguration | CWE-918 | SSRF via `token_endpoint` parameter in callback | api/oauth.py |
+| OAuth Misconfiguration | CWE-798 | Hardcoded `client_secret` = `oauth-client-secret-2024` | api/oauth.py |
+| OAuth Misconfiguration | CWE-285 | Any user can revoke any token (no auth on /revoke) | api/oauth.py |
+| 2FA Bypass | CWE-798 | Hardcoded master bypass code `000000` always accepted | api/mfa.py |
+| 2FA Bypass | CWE-307 | No brute-force lockout on MFA verify endpoint | api/mfa.py |
+| 2FA Bypass | CWE-285 | Unauthenticated access to backup codes endpoint | api/mfa.py |
+| Password Reset Poisoning | CWE-20 | Host header injection — reset URL built from `request.headers.get('Host')` | api/passwordreset.py |
+| Password Reset Poisoning | CWE-330 | Token = `random.randint(100000, 999999)` — only 900k possibilities | api/passwordreset.py |
+| Password Reset Poisoning | CWE-208 | Timing oracle — 500ms sleep for valid email reveals account existence | api/passwordreset.py |
+| GraphQL | CWE-400 | No depth or complexity limit — deeply nested queries cause DoS | api/graphql_api.py |
+| GraphQL | CWE-200 | Introspection enabled in production — full schema exposed | api/graphql_api.py |
+| GraphQL | CWE-89 | Resolver uses `f"SELECT {fields} FROM users WHERE id={id}"` — SQLi + field injection | api/graphql_api.py |
+| GraphQL | CWE-285 | No field-level authorization — any user reads any user's card_number | api/graphql_api.py |
+| JWT Algorithm Confusion | CWE-347 | `alg:none` accepted without signature verification | api/jwt_auth.py |
+| JWT Algorithm Confusion | CWE-347 | HS256 verified with RSA public key as HMAC secret (algorithm confusion) | api/jwt_auth.py |
+| JWT Algorithm Confusion | CWE-918 | SSRF — `kid` header starting with `http` fetches remote JWKS | api/jwt_auth.py |
+| JWT Algorithm Confusion | CWE-613 | Expired JWTs accepted indefinitely — no expiry enforcement on refresh | api/jwt_auth.py |
+
 ---
 
 ## MITRE ATT&CK Coverage
@@ -154,7 +185,17 @@ VulnBank/
 
 ---
 
-## Quick Start
+## Running VulnBank
+
+### Docker Compose (recommended)
+
+```bash
+docker-compose up
+# App:    http://localhost:5000
+# MailHog (catches reset emails): http://localhost:8025
+```
+
+### Local (without Docker)
 
 ```bash
 # Clone
@@ -178,6 +219,31 @@ Default test credentials (hardcoded intentionally):
 
 ---
 
+## CI/CD Integration
+
+VulnBank ships with a GitHub Actions workflow (`.github/workflows/secscope-scan.yml`) that automatically runs [SecureScope](https://github.com/OmarRao/secure-scope) on every push and pull request to `main`:
+
+- Installs Semgrep, pip-audit, and SecureScope
+- Runs the full scan with `--sarif --sbom --compliance` flags
+- Uploads SARIF results directly to the **GitHub Security tab** (requires `security-events: write` permission)
+- Archives all reports as workflow artifacts
+
+The workflow uses `continue-on-error: true` so it never blocks merges — it only surfaces findings.
+
+---
+
+## Postman Collection
+
+Import `vulnbank.postman_collection.json` into Postman to access **35 pre-built exploit requests** across 11 vulnerability folders (Auth, SQL Injection, OAuth, MFA Bypass, Password Reset, GraphQL, JWT, LDAP, Admin, Payments, File Upload).
+
+**Import steps:**
+1. Open Postman → Import → Upload Files
+2. Select `vulnbank.postman_collection.json`
+3. Set the `base_url` variable to `http://localhost:5000`
+4. Each request includes pre-configured exploit payloads and CWE descriptions
+
+---
+
 ## Use with SecureScope
 
 VulnBank is the canonical test target for [SecureScope](https://github.com/OmarRao/secure-scope). To scan it:
@@ -196,6 +262,7 @@ A pre-generated sample report is available at:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| [v6.0.0](https://github.com/OmarRao/analyzer/releases/tag/v6.0.0) | 2026-06-24 | LDAP injection, OAuth misconfig, 2FA bypass, password reset poisoning, GraphQL vulns, JWT algorithm confusion, Docker Compose, GitHub Actions CI, Postman collection |
 | [v5.0.0](https://github.com/OmarRao/analyzer/releases/tag/v5.0.0) | 2026-06-23 | Complete 6-framework coverage — ISO 27001:2022 Annex A added to all 14 api/utils/jobs/config/models files; new CWE-362 race-condition endpoints and CWE-840 negative-transfer business logic flaw |
 | [v4.0.0](https://github.com/OmarRao/analyzer/releases/tag/v4.0.0) | 2026-06-22 | Multi-framework annotations — PCI DSS v4.0, NIST SP 800-53 Rev 5, SANS/CWE Top 25 added to all vulnerabilities; README framework mapping tables |
 | [v3.0.0](https://github.com/OmarRao/analyzer/releases/tag/v3.0.0) | 2026-06-17 | Latest Threat Classes — SSTI, Prompt Injection, Mass Assignment, JWT Algorithm Confusion, BOLA, ReDoS, XXE, CORS, HTTP Response Splitting, Prototype Pollution |

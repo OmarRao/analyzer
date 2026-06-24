@@ -572,6 +572,20 @@ def negative_transfer():
     return jsonify({"error": "recipient not found"}), 404
 
 
+from api.oauth import oauth_bp
+from api.mfa import mfa_bp
+from api.passwordreset import reset_bp
+from api.graphql_api import graphql_bp
+from api.jwt_auth import jwt_bp
+from api.ldap import ldap_bp
+
+app.register_blueprint(oauth_bp)
+app.register_blueprint(mfa_bp)
+app.register_blueprint(reset_bp)
+app.register_blueprint(graphql_bp)
+app.register_blueprint(jwt_bp)
+app.register_blueprint(ldap_bp)
+
 if __name__ == "__main__":
     init_db()
     # CWE-94 / CWE-209: Debug mode enabled — exposes stack traces, interactive debugger, internal config
