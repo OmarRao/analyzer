@@ -578,6 +578,8 @@ from api.passwordreset import reset_bp
 from api.graphql_api import graphql_bp
 from api.jwt_auth import jwt_bp
 from api.ldap import ldap_bp
+from api.xxe import xxe_bp
+from api.ssti import ssti_bp
 
 app.register_blueprint(oauth_bp)
 app.register_blueprint(mfa_bp)
@@ -585,6 +587,8 @@ app.register_blueprint(reset_bp)
 app.register_blueprint(graphql_bp)
 app.register_blueprint(jwt_bp)
 app.register_blueprint(ldap_bp)
+app.register_blueprint(xxe_bp)
+app.register_blueprint(ssti_bp)
 
 if __name__ == "__main__":
     init_db()
