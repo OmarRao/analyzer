@@ -1,0 +1,65 @@
+<svg viewBox="0 0 600 500" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-color="#00000022"/>
+    </filter>
+  </defs>
+  <text x="300" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#1b5e20">VulnBank — CTF Scoring Flow</text>
+
+  <!-- Attacker -->
+  <rect x="220" y="50" width="160" height="45" rx="6" fill="#455a64" filter="url(#shadow)"/>
+  <text x="300" y="70" text-anchor="middle" font-size="13" fill="white">Attacker</text>
+  <text x="300" y="86" text-anchor="middle" font-size="10" fill="#cfd8dc">Security Researcher</text>
+  <line x1="300" y1="95" x2="300" y2="125" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Enumerate endpoints -->
+  <rect x="185" y="125" width="230" height="40" rx="6" fill="#1565c0" filter="url(#shadow)"/>
+  <text x="300" y="142" text-anchor="middle" font-size="12" fill="white">Enumerate Endpoints</text>
+  <text x="300" y="157" text-anchor="middle" font-size="10" fill="#bbdefb">/api/* · /login · /transfer</text>
+  <line x1="300" y1="165" x2="300" y2="195" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Find vulnerable endpoint -->
+  <rect x="175" y="195" width="250" height="40" rx="6" fill="#b71c1c" filter="url(#shadow)"/>
+  <text x="300" y="212" text-anchor="middle" font-size="12" fill="white">Find Vulnerable Endpoint</text>
+  <text x="300" y="227" text-anchor="middle" font-size="10" fill="#ffcdd2">SQLi · SSTI · XXE · JWT · IDOR</text>
+  <line x1="300" y1="235" x2="300" y2="265" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Exploit -->
+  <rect x="175" y="265" width="250" height="40" rx="6" fill="#6a1b9a" filter="url(#shadow)"/>
+  <text x="300" y="282" text-anchor="middle" font-size="12" fill="white">Exploit Vulnerability</text>
+  <text x="300" y="297" text-anchor="middle" font-size="10" fill="#e1bee7">craft payload → send request</text>
+  <line x1="300" y1="305" x2="300" y2="335" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Get flag string -->
+  <rect x="175" y="335" width="250" height="40" rx="6" fill="#f57f17" filter="url(#shadow)"/>
+  <text x="300" y="352" text-anchor="middle" font-size="12" fill="white">Receive Flag String</text>
+  <text x="300" y="367" text-anchor="middle" font-size="10" fill="#fff9c4">FLAG{...} in response body</text>
+  <line x1="300" y1="375" x2="300" y2="405" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Submit to CTF endpoint -->
+  <rect x="155" y="405" width="290" height="40" rx="6" fill="#1b5e20" filter="url(#shadow)"/>
+  <text x="300" y="422" text-anchor="middle" font-size="12" fill="white">POST /api/ctf/submit</text>
+  <text x="300" y="437" text-anchor="middle" font-size="10" fill="#c8e6c9">{"flag": "FLAG{...}", "challenge": "sql_injection"}</text>
+
+  <!-- Hint system -->
+  <rect x="470" y="265" width="120" height="55" rx="6" fill="#546e7a" filter="url(#shadow)"/>
+  <text x="530" y="285" text-anchor="middle" font-size="11" fill="white">Hints System</text>
+  <text x="530" y="300" text-anchor="middle" font-size="10" fill="#cfd8dc">GET /api/ctf/</text>
+  <text x="530" y="313" text-anchor="middle" font-size="10" fill="#cfd8dc">hints/{id}</text>
+  <line x1="425" y1="285" x2="470" y2="285" stroke="#555" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+
+  <!-- Scoreboard -->
+  <rect x="10" y="405" width="130" height="40" rx="6" fill="#0277bd" filter="url(#shadow)"/>
+  <text x="75" y="422" text-anchor="middle" font-size="11" fill="white">Scoreboard</text>
+  <text x="75" y="437" text-anchor="middle" font-size="10" fill="#bbdefb">GET /api/ctf/scores</text>
+  <line x1="155" y1="425" x2="140" y2="425" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Points label -->
+  <rect x="470" y="405" width="120" height="40" rx="6" fill="#4caf50" filter="url(#shadow)"/>
+  <text x="530" y="422" text-anchor="middle" font-size="11" fill="white">Points Awarded</text>
+  <text x="530" y="437" text-anchor="middle" font-size="10" fill="#e8f5e9">25–100 pts/flag</text>
+  <line x1="445" y1="425" x2="470" y2="425" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+</svg>

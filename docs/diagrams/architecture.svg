@@ -1,0 +1,134 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-color="#00000022"/>
+    </filter>
+  </defs>
+  <text x="450" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#b71c1c">VulnBank — Full Stack Architecture</text>
+
+  <!-- Browser -->
+  <rect x="20" y="50" width="100" height="50" rx="6" fill="#455a64" filter="url(#shadow)"/>
+  <text x="70" y="72" text-anchor="middle" font-size="12" fill="white">Browser</text>
+  <text x="70" y="88" text-anchor="middle" font-size="10" fill="#cfd8dc">:80</text>
+  <line x1="120" y1="75" x2="160" y2="75" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- nginx -->
+  <rect x="160" y="50" width="100" height="50" rx="6" fill="#1565c0" filter="url(#shadow)"/>
+  <text x="210" y="72" text-anchor="middle" font-size="12" fill="white">nginx</text>
+  <text x="210" y="88" text-anchor="middle" font-size="10" fill="#bbdefb">port 80</text>
+  <line x1="260" y1="75" x2="300" y2="75" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Flask app -->
+  <rect x="300" y="45" width="140" height="60" rx="6" fill="#4a148c" filter="url(#shadow)"/>
+  <text x="370" y="68" text-anchor="middle" font-size="13" font-weight="bold" fill="white">Flask App</text>
+  <text x="370" y="84" text-anchor="middle" font-size="10" fill="#e1bee7">app.py · port 5000</text>
+  <text x="370" y="98" text-anchor="middle" font-size="10" fill="#e1bee7">Python 3.x / Werkzeug</text>
+
+  <!-- Node.js microservice -->
+  <rect x="640" y="50" width="160" height="50" rx="6" fill="#1b5e20" filter="url(#shadow)"/>
+  <text x="720" y="72" text-anchor="middle" font-size="12" fill="white">Node.js Microservice</text>
+  <text x="720" y="88" text-anchor="middle" font-size="10" fill="#c8e6c9">port 3000 · Express</text>
+  <line x1="440" y1="75" x2="640" y2="75" stroke="#555" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <text x="530" y="68" font-size="10" fill="#555">HTTP proxy</text>
+
+  <!-- Blueprints row -->
+  <text x="370" y="128" text-anchor="middle" font-size="12" font-weight="bold" fill="#37474f">Flask Blueprints</text>
+  <line x1="370" y1="105" x2="370" y2="135" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- auth.py -->
+  <rect x="20" y="140" width="120" height="55" rx="5" fill="#b71c1c" filter="url(#shadow)"/>
+  <text x="80" y="160" text-anchor="middle" font-size="11" font-weight="bold" fill="white">auth.py</text>
+  <text x="80" y="175" text-anchor="middle" font-size="9" fill="#ffcdd2">CWE-89: SQLi login</text>
+  <text x="80" y="188" text-anchor="middle" font-size="9" fill="#ffcdd2">CWE-798: hardcoded</text>
+
+  <!-- accounts.py -->
+  <rect x="155" y="140" width="120" height="55" rx="5" fill="#e65100" filter="url(#shadow)"/>
+  <text x="215" y="160" text-anchor="middle" font-size="11" font-weight="bold" fill="white">accounts.py</text>
+  <text x="215" y="175" text-anchor="middle" font-size="9" fill="#ffe0b2">CWE-639: IDOR</text>
+  <text x="215" y="188" text-anchor="middle" font-size="9" fill="#ffe0b2">Balance/transfer</text>
+
+  <!-- idor.py -->
+  <rect x="290" y="140" width="120" height="55" rx="5" fill="#b71c1c" filter="url(#shadow)"/>
+  <text x="350" y="160" text-anchor="middle" font-size="11" font-weight="bold" fill="white">idor.py</text>
+  <text x="350" y="175" text-anchor="middle" font-size="9" fill="#ffcdd2">CWE-639: Object ref</text>
+  <text x="350" y="188" text-anchor="middle" font-size="9" fill="#ffcdd2">Profile access</text>
+
+  <!-- xxe.py -->
+  <rect x="425" y="140" width="120" height="55" rx="5" fill="#6a1b9a" filter="url(#shadow)"/>
+  <text x="485" y="160" text-anchor="middle" font-size="11" font-weight="bold" fill="white">xxe.py</text>
+  <text x="485" y="175" text-anchor="middle" font-size="9" fill="#e1bee7">CWE-611: XXE</text>
+  <text x="485" y="188" text-anchor="middle" font-size="9" fill="#e1bee7">XML entity inject</text>
+
+  <!-- ssti.py -->
+  <rect x="560" y="140" width="120" height="55" rx="5" fill="#6a1b9a" filter="url(#shadow)"/>
+  <text x="620" y="160" text-anchor="middle" font-size="11" font-weight="bold" fill="white">ssti.py</text>
+  <text x="620" y="175" text-anchor="middle" font-size="9" fill="#e1bee7">CWE-94: SSTI</text>
+  <text x="620" y="188" text-anchor="middle" font-size="9" fill="#e1bee7">Jinja2 render_template_string</text>
+
+  <!-- business_logic.py -->
+  <rect x="695" y="140" width="130" height="55" rx="5" fill="#f57f17" filter="url(#shadow)"/>
+  <text x="760" y="160" text-anchor="middle" font-size="11" font-weight="bold" fill="white">business_logic.py</text>
+  <text x="760" y="175" text-anchor="middle" font-size="9" fill="#fff9c4">CWE-840: Logic flaw</text>
+  <text x="760" y="188" text-anchor="middle" font-size="9" fill="#fff9c4">Overdraft / race</text>
+
+  <!-- Second row of blueprints -->
+  <rect x="20" y="215" width="130" height="55" rx="5" fill="#b71c1c" filter="url(#shadow)"/>
+  <text x="85" y="235" text-anchor="middle" font-size="11" font-weight="bold" fill="white">deserialization.py</text>
+  <text x="85" y="250" text-anchor="middle" font-size="9" fill="#ffcdd2">CWE-502: Pickle RCE</text>
+  <text x="85" y="263" text-anchor="middle" font-size="9" fill="#ffcdd2">YAML arbitrary load</text>
+
+  <rect x="165" y="215" width="120" height="55" rx="5" fill="#e65100" filter="url(#shadow)"/>
+  <text x="225" y="235" text-anchor="middle" font-size="11" font-weight="bold" fill="white">nosql.py</text>
+  <text x="225" y="250" text-anchor="middle" font-size="9" fill="#ffe0b2">CWE-943: NoSQLi</text>
+  <text x="225" y="263" text-anchor="middle" font-size="9" fill="#ffe0b2">MongoDB $where</text>
+
+  <rect x="300" y="215" width="120" height="55" rx="5" fill="#1b5e20" filter="url(#shadow)"/>
+  <text x="360" y="235" text-anchor="middle" font-size="11" font-weight="bold" fill="white">ctf.py</text>
+  <text x="360" y="250" text-anchor="middle" font-size="9" fill="#c8e6c9">CTF scoring</text>
+  <text x="360" y="263" text-anchor="middle" font-size="9" fill="#c8e6c9">11 flags · leaderboard</text>
+
+  <rect x="435" y="215" width="130" height="55" rx="5" fill="#1565c0" filter="url(#shadow)"/>
+  <text x="500" y="235" text-anchor="middle" font-size="11" font-weight="bold" fill="white">graphql_api.py</text>
+  <text x="500" y="250" text-anchor="middle" font-size="9" fill="#bbdefb">CWE-89: GraphQL SQLi</text>
+  <text x="500" y="263" text-anchor="middle" font-size="9" fill="#bbdefb">Introspection exposed</text>
+
+  <rect x="580" y="215" width="120" height="55" rx="5" fill="#0277bd" filter="url(#shadow)"/>
+  <text x="640" y="235" text-anchor="middle" font-size="11" font-weight="bold" fill="white">jwt_auth.py</text>
+  <text x="640" y="250" text-anchor="middle" font-size="9" fill="#bbdefb">CWE-347: JWT forgery</text>
+  <text x="640" y="263" text-anchor="middle" font-size="9" fill="#bbdefb">alg=none / weak secret</text>
+
+  <!-- Databases -->
+  <line x1="370" y1="270" x2="370" y2="320" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="378" y="300" font-size="10" fill="#555">queries</text>
+
+  <rect x="200" y="320" width="160" height="55" rx="6" fill="#546e7a" filter="url(#shadow)"/>
+  <text x="280" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="white">SQLite (main)</text>
+  <text x="280" y="358" text-anchor="middle" font-size="10" fill="#cfd8dc">users · accounts</text>
+  <text x="280" y="372" text-anchor="middle" font-size="10" fill="#cfd8dc">transactions · ctf_flags</text>
+
+  <line x1="225" y1="242" x2="180" y2="320" stroke="#555" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arr)"/>
+  <rect x="20" y="320" width="150" height="55" rx="6" fill="#37474f" filter="url(#shadow)"/>
+  <text x="95" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="white">MongoDB</text>
+  <text x="95" y="358" text-anchor="middle" font-size="10" fill="#cfd8dc">nosql_users collection</text>
+  <text x="95" y="372" text-anchor="middle" font-size="10" fill="#cfd8dc">port 27017</text>
+
+  <!-- Legend -->
+  <rect x="20" y="400" width="860" height="55" rx="6" fill="#f9f9f9" stroke="#ccc"/>
+  <text x="40" y="420" font-size="10" font-weight="bold" fill="#333">Severity Legend (Blueprint border color):</text>
+  <rect x="40" y="428" width="12" height="12" fill="#b71c1c"/>
+  <text x="58" y="438" font-size="10" fill="#555">Critical RCE/SQLi</text>
+  <rect x="150" y="428" width="12" height="12" fill="#e65100"/>
+  <text x="168" y="438" font-size="10" fill="#555">High IDOR/NoSQL</text>
+  <rect x="260" y="428" width="12" height="12" fill="#6a1b9a"/>
+  <text x="278" y="438" font-size="10" fill="#555">High SSTI/XXE</text>
+  <rect x="360" y="428" width="12" height="12" fill="#f57f17"/>
+  <text x="378" y="438" font-size="10" fill="#555">Medium Logic</text>
+  <rect x="460" y="428" width="12" height="12" fill="#1565c0"/>
+  <text x="478" y="438" font-size="10" fill="#555">High JWT/GraphQL</text>
+  <rect x="570" y="428" width="12" height="12" fill="#1b5e20"/>
+  <text x="588" y="438" font-size="10" fill="#555">CTF/Scoring</text>
+  <text x="40" y="450" font-size="9" fill="#777">VulnBank v7.0.0 — Intentionally Vulnerable Banking Application for Security Training</text>
+</svg>

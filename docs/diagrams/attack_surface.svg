@@ -1,0 +1,64 @@
+<svg viewBox="0 0 800 550" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <text x="400" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#b71c1c">VulnBank — Attack Surface Map</text>
+
+  <!-- Outer ring - Low/Info (green) -->
+  <circle cx="400" cy="290" r="240" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2" opacity="0.7"/>
+  <!-- Ring 3 - Medium (yellow) -->
+  <circle cx="400" cy="290" r="185" fill="#fff9c4" stroke="#f9a825" stroke-width="2" opacity="0.8"/>
+  <!-- Ring 2 - High (orange) -->
+  <circle cx="400" cy="290" r="130" fill="#fff3e0" stroke="#e65100" stroke-width="2" opacity="0.85"/>
+  <!-- Ring 1 - Critical (red) -->
+  <circle cx="400" cy="290" r="75" fill="#ffebee" stroke="#b71c1c" stroke-width="2.5" opacity="0.9"/>
+  <!-- Center -->
+  <circle cx="400" cy="290" r="40" fill="#b71c1c"/>
+  <text x="400" y="284" text-anchor="middle" font-size="9" font-weight="bold" fill="white">VulnBank</text>
+  <text x="400" y="296" text-anchor="middle" font-size="9" fill="white">Application</text>
+
+  <!-- Ring 1 Labels - Critical -->
+  <text x="400" y="232" text-anchor="middle" font-size="10" font-weight="bold" fill="#b71c1c">SQLi (CWE-89)</text>
+  <text x="457" y="262" text-anchor="middle" font-size="10" font-weight="bold" fill="#b71c1c">RCE (CWE-77)</text>
+  <text x="457" y="320" text-anchor="middle" font-size="10" font-weight="bold" fill="#b71c1c">XXE (CWE-611)</text>
+  <text x="400" y="352" text-anchor="middle" font-size="10" font-weight="bold" fill="#b71c1c">SSTI (CWE-94)</text>
+  <text x="343" y="320" text-anchor="middle" font-size="10" font-weight="bold" fill="#b71c1c">Pickle (CWE-502)</text>
+  <text x="343" y="262" text-anchor="middle" font-size="10" font-weight="bold" fill="#b71c1c">OS Cmd (CWE-78)</text>
+
+  <!-- Ring 2 Labels - High -->
+  <text x="400" y="178" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">IDOR (CWE-639)</text>
+  <text x="505" y="205" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">JWT Forge (CWE-347)</text>
+  <text x="523" y="290" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">SSRF (CWE-918)</text>
+  <text x="505" y="375" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">Path Trav (CWE-22)</text>
+  <text x="295" y="375" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">Deserialization (CWE-502)</text>
+  <text x="277" y="290" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">Auth Bypass (CWE-287)</text>
+  <text x="295" y="205" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">Mass Assign (CWE-915)</text>
+
+  <!-- Ring 3 Labels - Medium -->
+  <text x="400" y="118" text-anchor="middle" font-size="10" fill="#e65100">CSRF (CWE-352)</text>
+  <text x="560" y="148" text-anchor="middle" font-size="10" fill="#e65100">Business Logic (CWE-840)</text>
+  <text x="600" y="245" text-anchor="middle" font-size="10" fill="#e65100">NoSQL Inj (CWE-943)</text>
+  <text x="580" y="360" text-anchor="middle" font-size="10" fill="#e65100">ReDoS (CWE-400)</text>
+  <text x="400" y="462" text-anchor="middle" font-size="10" fill="#e65100">GraphQL Inj (CWE-89)</text>
+  <text x="220" y="360" text-anchor="middle" font-size="10" fill="#e65100">YAML Deser (CWE-502)</text>
+  <text x="200" y="245" text-anchor="middle" font-size="10" fill="#e65100">Weak Crypto (CWE-327)</text>
+  <text x="240" y="148" text-anchor="middle" font-size="10" fill="#e65100">Race Cond (CWE-362)</text>
+
+  <!-- Ring 4 Labels - Low -->
+  <text x="400" y="60" text-anchor="middle" font-size="10" fill="#2e7d32">Open Redirect (CWE-601)</text>
+  <text x="640" y="140" text-anchor="middle" font-size="10" fill="#2e7d32">Log Injection (CWE-117)</text>
+  <text x="660" y="290" text-anchor="middle" font-size="10" fill="#2e7d32">Info Disclosure (CWE-200)</text>
+  <text x="580" y="450" text-anchor="middle" font-size="10" fill="#2e7d32">Verbose Errors (CWE-209)</text>
+  <text x="220" y="450" text-anchor="middle" font-size="10" fill="#2e7d32">Missing HSTS (CWE-319)</text>
+  <text x="140" y="290" text-anchor="middle" font-size="10" fill="#2e7d32">Clickjacking (CWE-1021)</text>
+  <text x="160" y="140" text-anchor="middle" font-size="10" fill="#2e7d32">Dir Listing (CWE-548)</text>
+
+  <!-- Legend -->
+  <rect x="20" y="500" width="760" height="40" rx="4" fill="#f9f9f9" stroke="#ccc"/>
+  <circle cx="45" cy="520" r="8" fill="#b71c1c"/>
+  <text x="60" y="524" font-size="10" fill="#333">Critical (Inner)</text>
+  <circle cx="160" cy="520" r="8" fill="#fff3e0" stroke="#e65100" stroke-width="2"/>
+  <text x="175" y="524" font-size="10" fill="#333">High</text>
+  <circle cx="230" cy="520" r="8" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+  <text x="245" y="524" font-size="10" fill="#333">Medium</text>
+  <circle cx="320" cy="520" r="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+  <text x="335" y="524" font-size="10" fill="#333">Low/Info (Outer)</text>
+  <text x="480" y="524" font-size="9" fill="#777">VulnBank v7.0.0 — All vulnerabilities are intentional for training purposes</text>
+</svg>
