@@ -85,7 +85,34 @@ Every vulnerable code block carries a full security framework cross-reference co
 
 ## 2. Architecture & Components
 
-![VulnBank full-stack architecture — Flask, MongoDB, Node.js, nginx, MailHog](docs/diagrams/architecture.svg)
+```mermaid
+graph TD
+    subgraph Client
+        Browser[Web Browser]
+    end
+    subgraph nginx
+        PROXY[Reverse Proxy :80]
+    end
+    subgraph Flask App :5000
+        AUTH[Auth Blueprint]
+        BANK[Banking Blueprint]
+        ADMIN[Admin Blueprint]
+        CTF[CTF Blueprint]
+    end
+    subgraph Services
+        MONGO[(MongoDB)]
+        NODE[Node.js Microservice :3000]
+        PICKLE[Pickle Deserializer]
+    end
+    Browser --> PROXY
+    PROXY --> AUTH & BANK & ADMIN & CTF
+    AUTH --> MONGO
+    BANK --> MONGO
+    ADMIN --> MONGO
+    BANK --> NODE
+    BANK --> PICKLE
+    CTF --> MONGO
+```
 
 ### Component Overview
 
@@ -330,7 +357,30 @@ print(data)
 
 ## 6. Vulnerability Index
 
-![Attack surface map — all vulnerabilities by category and severity](docs/diagrams/attack_surface.svg)
+```mermaid
+graph LR
+    subgraph Critical
+        SQLI[CWE-89 SQL Injection]
+        DESER[CWE-502 Deserialization RCE]
+        XXE[CWE-611 XXE]
+    end
+    subgraph High
+        IDOR[CWE-639 IDOR]
+        JWT[JWT Algorithm Confusion]
+        NOSQL[CWE-943 NoSQL Injection]
+        PROTO[CWE-1321 Prototype Pollution]
+    end
+    subgraph Medium
+        SMUGGLE[CWE-444 HTTP Smuggling]
+        BIZ[CWE-840 Business Logic]
+        REDIR[Open Redirect]
+    end
+    subgraph Low
+        INFO[Information Disclosure]
+        CSRF[Missing CSRF]
+        HEADERS[Missing Security Headers]
+    end
+```
 
 Complete index of all vulnerability classes with file references and framework cross-references:
 
@@ -601,7 +651,23 @@ For `/admin/run`, the correct fix is to remove the route entirely or replace it 
 
 **Framework:** CWE-639, CWE-285 · ATT&CK T1078 · OWASP A01:2021, API1:2023 · PCI DSS Req 7.2, 7.3 · NIST AC-3
 
-![IDOR exploit chain — from recon to account takeover](docs/diagrams/exploit_chain.svg)
+```mermaid
+flowchart LR
+    A[Recon\nEnumerate endpoints] --> B[NoSQL Injection\nBypass login]
+    B --> C[JWT Forgery\nalg: none attack]
+    C --> D[IDOR\nAccess other accounts]
+    D --> E[Business Logic\nNegative transfer]
+    E --> F[Deserialization\nPickle RCE]
+    F --> G[Full Compromise\n🏴 Root Flag]
+
+    style A fill:#4a9eff,color:#fff
+    style B fill:#ff6b35,color:#fff
+    style C fill:#ff6b35,color:#fff
+    style D fill:#ff6b35,color:#fff
+    style E fill:#ffa500,color:#fff
+    style F fill:#dc143c,color:#fff
+    style G fill:#8b0000,color:#fff
+```
 
 ### 10.1 Root Cause — /api/transactions/<id> (app.py)
 
@@ -1211,7 +1277,20 @@ user = _users_col.find_one({"username": username, "password": password})
 
 **Framework:** CWE-840, CWE-362, CWE-20 · ATT&CK T1548, T1499 · OWASP A04:2021 · PCI DSS Req 6.2.4 · NIST AC-3
 
-![VulnBank CTF flow and business logic attack paths](docs/diagrams/ctf_flow.svg)
+```mermaid
+flowchart TD
+    A[Team Registers] --> B[Browse Challenges]
+    B --> C[Exploit Vulnerability]
+    C --> D[Capture FLAG token]
+    D --> E[POST /ctf/submit]
+    E --> F{Valid Flag?}
+    F -->|Yes, first blood| G[+Points + Bonus]
+    F -->|Yes, already solved| H[+Points]
+    F -->|No| I[❌ Rejected]
+    G & H --> J[Update Scoreboard]
+    J --> K[GET /ctf/scoreboard]
+    I --> B
+```
 
 ### 16.1 Negative Transfer — Steal Funds (CWE-840)
 
