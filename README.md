@@ -1,6 +1,66 @@
-# VulnBank v6.0.0 — Deliberately Vulnerable Banking Application
+# VulnBank v7.0.0 — Deliberately Vulnerable Banking Application
+
+![Version](https://img.shields.io/badge/version-v7.0.0-blue)
+![Flask](https://img.shields.io/badge/flask-3.x-green)
+![Firebase](https://img.shields.io/badge/telemetry-Firebase-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 > **Purpose:** A purpose-built, intentionally insecure banking application used as the primary test target for [SecureScope](https://github.com/OmarRao/secure-scope) — an AI-powered GitHub security scanner with MITRE ATT&CK mapping, ransomware detection, and multi-LLM fix advisory.
+
+## What's New in v7.0.0
+
+| Feature | Description |
+|---------|-------------|
+| IDOR endpoints | 6 new `/api/accounts/<id>` endpoints with no ownership checks (CWE-639) |
+| Business logic | Overdraft, rate manipulation, fee abuse, race condition voucher (CWE-840, CWE-362) |
+| Deserialization | Pickle/YAML RCE via session restore, preferences import, report templates (CWE-502) |
+| NoSQL injection | MongoDB `$ne`, `$where`, `$set` privilege escalation (CWE-943) |
+| CTF mode | 11 hidden flags with scoreboard and hints at `/api/ctf/*` |
+| Exploit writeups | `docs/exploits/` — 10 detailed writeups with curl/Python payloads |
+| Node.js microservice | Port 3000: prototype pollution, eval RCE, ReDoS, open redirect (CWE-1321, CWE-94) |
+| nginx + smuggling | HTTP request smuggling setup via nginx reverse proxy (CWE-444) |
+| MongoDB service | docker-compose adds MongoDB for NoSQL endpoints |
+| Firebase tracking | Operator analytics via Firebase Measurement Protocol |
+
+## Quick Start
+
+```bash
+# Clone and run (Python)
+git clone https://github.com/OmarRao/analyzer
+cd analyzer
+pip install -r requirements.txt
+python app.py
+# Open http://localhost:5000
+
+# Or with Docker Compose (includes MongoDB + nginx)
+docker-compose up
+# VulnBank:    http://localhost:5000
+# nginx proxy: http://localhost:80
+# Node.js:     http://localhost:3000
+```
+
+Default credentials: `admin / admin123` and `user / password123`
+
+## Endpoints Quick Reference
+
+| Route | Method | Blueprint | Vuln Class | CWE |
+|-------|--------|-----------|------------|-----|
+| `/` | GET | app | — | — |
+| `/login` | GET, POST | auth | Weak credentials | CWE-521 |
+| `/logout` | GET | auth | — | — |
+| `/dashboard` | GET | app | — | — |
+| `/api/auth/login` | POST | auth | SQLi / Weak auth | CWE-89 |
+| `/api/accounts/<id>` | GET | accounts | IDOR | CWE-639 |
+| `/api/accounts/<id>/transfer` | POST | accounts | IDOR, business logic | CWE-639 |
+| `/api/xxe/parse` | POST | xxe | XXE | CWE-611 |
+| `/api/ssti/render` | POST | ssti | SSTI | CWE-94 |
+| `/api/business/voucher` | POST | business_logic | Race condition | CWE-362 |
+| `/api/deserialization/restore` | POST | deserialization | Pickle RCE | CWE-502 |
+| `/api/nosql/search` | POST | nosql | NoSQL injection | CWE-943 |
+| `/api/ctf/submit` | POST | ctf | — | — |
+| `/api/ctf/scoreboard` | GET | ctf | — | — |
+| `http://localhost:3000/` | GET | Node.js | Prototype pollution | CWE-1321 |
+| `http://localhost:3000/eval` | POST | Node.js | eval RCE | CWE-94 |
 
 ---
 
@@ -262,6 +322,7 @@ A pre-generated sample report is available at:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| [v7.0.0](https://github.com/OmarRao/analyzer/releases/tag/v7.0.0) | 2026-06-26 | IDOR endpoints, business logic flaws, deserialization RCE, NoSQL injection, CTF mode with 11 flags, exploit writeups, Node.js microservice, nginx request smuggling, MongoDB, Firebase telemetry |
 | [v6.0.0](https://github.com/OmarRao/analyzer/releases/tag/v6.0.0) | 2026-06-24 | LDAP injection, OAuth misconfig, 2FA bypass, password reset poisoning, GraphQL vulns, JWT algorithm confusion, Docker Compose, GitHub Actions CI, Postman collection |
 | [v5.0.0](https://github.com/OmarRao/analyzer/releases/tag/v5.0.0) | 2026-06-23 | Complete 6-framework coverage — ISO 27001:2022 Annex A added to all 14 api/utils/jobs/config/models files; new CWE-362 race-condition endpoints and CWE-840 negative-transfer business logic flaw |
 | [v4.0.0](https://github.com/OmarRao/analyzer/releases/tag/v4.0.0) | 2026-06-22 | Multi-framework annotations — PCI DSS v4.0, NIST SP 800-53 Rev 5, SANS/CWE Top 25 added to all vulnerabilities; README framework mapping tables |

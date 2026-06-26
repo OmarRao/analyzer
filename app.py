@@ -20,10 +20,25 @@ import sqlite3
 import subprocess
 import pickle
 import hashlib
+import uuid
 import xml.etree.ElementTree as ET
 from flask import Flask, request, render_template, redirect, session, jsonify, make_response
+from services.firebase_tracker import track_login, track_page_view
 
 app = Flask(__name__)
+
+
+@app.before_request
+def _track_page():
+    """Anonymous page view tracking via Firebase."""
+    try:
+        anon_id = session.get("_anon_id")
+        if not anon_id:
+            anon_id = str(uuid.uuid4())
+            session["_anon_id"] = anon_id
+        track_page_view(anon_id, request.path)
+    except Exception:
+        pass
 
 # CWE-798: Hardcoded credentials
 # ATT&CK: T1552.001 - Credentials in Files
@@ -99,6 +114,8 @@ def login():
             session["user_id"] = user[0]
             session["username"] = user[1]
             session["role"] = user[4]
+            anon_id = session.get("_anon_id", str(uuid.uuid4()))
+            track_login(anon_id, hashlib.sha256(username.encode()).hexdigest()[:8])
             return redirect("/dashboard")
         else:
             error = "Invalid credentials"

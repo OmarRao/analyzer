@@ -4,7 +4,8 @@ Capture The Flag scoring for VulnBank security training exercises.
 """
 
 import time
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
+from services.firebase_tracker import track_ctf_submission
 
 ctf_bp = Blueprint("ctf", __name__)
 
@@ -90,6 +91,8 @@ def submit_flag():
             break
 
     if not matched_category:
+        anon_id = session.get("_anon_id", team)
+        track_ctf_submission(anon_id, team, "unknown", False)
         return jsonify({"correct": False, "message": "Incorrect flag. Keep trying!"}), 200
 
     # Initialize team entry
@@ -99,6 +102,8 @@ def submit_flag():
     team_data = _scoreboard[team]
 
     if matched_category in team_data["solved"]:
+        anon_id = session.get("_anon_id", team)
+        track_ctf_submission(anon_id, team, matched_category, True)
         return jsonify({
             "correct": True,
             "message": f"Flag already submitted for category: {CATEGORIES[matched_category]}",
@@ -108,6 +113,9 @@ def submit_flag():
     # Award points
     team_data["solved"].append(matched_category)
     team_data["score"] += 100
+
+    anon_id = session.get("_anon_id", team)
+    track_ctf_submission(anon_id, team, matched_category, True)
 
     return jsonify({
         "correct": True,
