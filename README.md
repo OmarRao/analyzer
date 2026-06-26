@@ -7,6 +7,16 @@
 
 > **Purpose:** A purpose-built, intentionally insecure banking application used as the primary test target for [SecureScope](https://github.com/OmarRao/secure-scope) — an AI-powered GitHub security scanner with MITRE ATT&CK mapping, ransomware detection, and multi-LLM fix advisory.
 
+**[📖 Technical User Guide](USERGUIDE.md)** — Installation, all endpoints, exploit walkthroughs, CTF guide
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [USERGUIDE.md](USERGUIDE.md) | Full guide — setup, all exploits, CTF walkthrough, Node.js service |
+| [docs/exploits/](docs/exploits/) | Detailed writeups for each vulnerability class |
+| [vulnbank.postman_collection.json](vulnbank.postman_collection.json) | Postman collection with exploit payloads |
+
 ## What's New in v7.0.0
 
 | Feature | Description |
