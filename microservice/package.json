@@ -1,0 +1,13 @@
+{
+  "name": "vulnbank-node",
+  "version": "1.0.0",
+  "description": "VulnBank Node.js microservice - deliberately vulnerable",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "express": "^4.18.0",
+    "lodash": "^4.17.21",
+    "serialize-javascript": "^6.0.0",
+    "vm2": "^3.9.19"
+  }
+}

